@@ -27,7 +27,7 @@ test('ATS mains priority: 114 W while charging must not mean building supplied b
   assert.equal(state({ ...data, loadWatts: 12000 }, false), 'charging');
   assert.equal(state({ ...data, batteryMode: 'idle' }, false), 'standby');
   assert.equal(state({ ...data, batteryMode: 'unknown' }, false), 'unknown');
-  assert.equal(state({ ...data, batteryMode: 'discharging' }, false), 'unknown');
+  assert.equal(state({ ...data, batteryMode: 'discharging' }, false), 'standby');
   assert.equal(state({ ...data, grid: 'off', batteryMode: 'discharging' }, false), 'supplying');
   assert.equal(state({ ...data, grid: 'unknown' }, false), 'unknown');
   assert.equal(state({ ...data, grid: 'unstable' }, false), 'unknown');

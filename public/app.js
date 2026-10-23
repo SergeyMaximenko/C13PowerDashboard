@@ -28,7 +28,8 @@ function inverterState(data, stale) {
   if (data.grid === 'on') {
     if (data.batteryMode === 'charging') return 'charging';
     if (data.output === 'off') return 'off';
-    if (data.batteryMode === 'idle') return 'standby';
+    // With mains present the inverter does not feed the residents: small battery discharge is internal inverter activity.
+    if (['idle', 'discharging'].includes(data.batteryMode)) return 'standby';
     return 'unknown';
   }
   const watts = data.loadWatts;
