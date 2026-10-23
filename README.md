@@ -6,6 +6,8 @@
 Deye Cloud  →  Cloudflare Worker (worker/)  →  сторінка (public/)
 ```
 
+Технічні подробиці (команди, секрети, архітектура, пастки) — у [TECHNICAL.md](TECHNICAL.md). Короткий вступ для нового AI-чату — [AI-CONTEXT.md](AI-CONTEXT.md).
+
 ## Перегляд сторінки
 
 Відкрийте `public/index.html` у VS Code через Live Server (Go Live). Збірка не потрібна. Дані сторінка бере з Worker за адресою в `<meta name="dashboard-api">` у `public/index.html`.
