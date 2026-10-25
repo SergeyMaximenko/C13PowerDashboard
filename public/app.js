@@ -152,7 +152,11 @@ function render(data, example = false) {
     ({ discharging: 'Розряджається', charging: 'Заряджається', idle: 'У режимі очікування', unknown: 'Стан заряду невідомий' })[data.batteryMode] || 'Стан заряду невідомий';
   $('update-note').textContent = example ? 'Демонстраційні значення для перегляду оформлення' : '';
   notice(example ? 'Приклад відображення — це не поточні показники будинку.' :
-    stale ? 'Дані застаріли або недоступні. Поточний стан живлення невідомий.' :
+    stale ? (data.collectedAt
+      ? 'Немає зв’язку з інвертором. Останні дані були ' +
+        (date.format(data.collectedAt) !== date.format(Date.now()) ? date.format(data.collectedAt) + ', ' : '') +
+        clock.format(data.collectedAt) + ', тому поточний стан живлення невідомий.'
+      : 'Немає даних від інвертора. Поточний стан живлення невідомий.') :
     '');
 }
 function example(mode) {
