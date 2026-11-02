@@ -109,10 +109,28 @@ function render(data, example = false) {
     (date.format(event.at) !== date.format(data.collectedAt) ? date.format(event.at) + ', ' : '') + clock.format(Math.round(event.at / 60000) * 60000) : '';
   displayedGridEvent = event && !stale ? { at: event.at, measuredAt: data.collectedAt, grid } : null;
   updateGridDuration();
+  // Generator on the GEN input: shown only when the data says so (hidden when unknown or stale).
+  const generator = stale ? 'unknown' : data.generator?.state;
+  const generatorKnown = generator === 'on' || generator === 'off';
+  // The card appears once the station has reported generator data (stations without a generator never show it).
+  if (generatorKnown) $('generator-card').dataset.seen = '1';
+  $('generator-card').hidden = !$('generator-card').dataset.seen;
+  $('generator-card').dataset.state = generator === 'on' ? 'on' : generatorKnown ? 'standby' : 'unknown';
+  $('generator-value').textContent = generator === 'on' ? 'Працює' : generatorKnown ? 'Зупинений' : 'Невідомо';
+  setHidden($('generator-icon'), generator === 'on');
+  setHidden($('generator-anim'), generator !== 'on');
+  $('generator-load').hidden = generator !== 'on';
+  const generatorWatts = data.generator?.powerW;
+  $('generator-power').textContent = !Number.isFinite(generatorWatts) ? '—' :
+    decimal.format(generatorWatts < 1000 ? generatorWatts : generatorWatts / 1000);
+  $('generator-unit').textContent = Number.isFinite(generatorWatts) && generatorWatts < 1000 ? 'Вт' : 'кВт';
+  $('generator-detail').textContent = generator === 'on'
+    ? (Number.isFinite(data.generator?.voltageV) ? 'Напруга генератора: ' + Math.round(data.generator.voltageV) + ' В' : 'Напруга є')
+    : generatorKnown ? 'Генератор не запущений' : 'Немає актуальних показників';
   const operation = inverterState(data, stale);
   $('output-card').dataset.state = ({ supplying: 'on', charging: 'on', standby: 'standby', off: 'off', unknown: 'unknown' })[operation];
   $('output-value').textContent = ({
-    supplying: 'Будинок живиться від інвертора',
+    supplying: generator === 'on' ? 'Будинок живиться від генератора' : 'Будинок живиться від інвертора',
     charging: 'Інвертор заряджає акумулятор',
     standby: 'Інвертор у режимі очікування',
     off: 'Немає напруги на виході',
@@ -148,8 +166,12 @@ function render(data, example = false) {
   // The level loops over the whole battery: from empty to full while charging, from full to empty while discharging.
   // The real charge is the number on the card; the animation only shows the direction.
   $('battery-mascot').dataset.dir = discharging ? 'down' : 'up';
+  // Power is shown next to the mode only while the battery really charges or discharges.
+  const batteryWatts = Number.isFinite(data.batteryWatts) && (data.batteryMode === 'charging' || data.batteryMode === 'discharging') ? Math.abs(data.batteryWatts) : null;
+  const batteryPower = batteryWatts === null ? '' :
+    ' · ' + decimal.format(batteryWatts < 1000 ? batteryWatts : batteryWatts / 1000) + (batteryWatts < 1000 ? ' Вт' : ' кВт');
   $('battery-mode').textContent = stale ? 'Немає актуальних показників' :
-    ({ discharging: 'Розряджається', charging: 'Заряджається', idle: 'У режимі очікування', unknown: 'Стан заряду невідомий' })[data.batteryMode] || 'Стан заряду невідомий';
+    (({ discharging: 'Розряджається', charging: 'Заряджається', idle: 'У режимі очікування', unknown: 'Стан заряду невідомий' })[data.batteryMode] || 'Стан заряду невідомий') + batteryPower;
   $('update-note').textContent = example ? 'Демонстраційні значення для перегляду оформлення' : '';
   notice(example ? 'Приклад відображення — це не поточні показники будинку.' :
     stale ? (data.collectedAt
@@ -165,8 +187,10 @@ function example(mode) {
   return { station: { name: 'Чавдар 13' }, collectedAt: now - (mode === 'stale' ? 3660000 : 300000),
     stale: mode === 'stale', grid: mains ? 'on' : 'off', output: mode === 'output-off' ? 'off' : 'on',
     allPhasesZero: !mains, soc: mode === 'on' ? 82 : mode === 'standby' ? 100 : mode === 'output-off' ? 10 : 61,
-    batteryMode: mode === 'on' ? 'charging' : ['standby', 'output-off'].includes(mode) ? 'idle' : 'discharging',
+    batteryMode: mode === 'on' || mode === 'generator' ? 'charging' : ['standby', 'output-off'].includes(mode) ? 'idle' : 'discharging',
+    generator: { state: mode === 'generator' ? 'on' : 'off', powerW: mode === 'generator' ? 22000 : 0, voltageV: mode === 'generator' ? 230 : 0 },
     loadWatts: mains || mode === 'output-off' ? 0 : 16800,
+    batteryWatts: mode === 'on' || mode === 'generator' ? -33200 : ['standby', 'output-off'].includes(mode) ? 0 : 17100,
     events: { appeared: { at: now - 3600000 }, disappeared: { at: now - 10800000 } } };
 }
 async function api() {
@@ -214,7 +238,7 @@ async function refresh() {
 function showExample() {
   const mode = $('view-mode').value;
   setLoading(mode === 'loading');
-  if (mode === 'loading') { render({ stale: true, collectedAt: null, grid: 'unknown', output: 'unknown', soc: null, events: {} }, true); notice(''); $('data-time').textContent = 'Завантажуємо дані…'; }
+  if (mode === 'loading') { render({ stale: true, collectedAt: null, grid: 'unknown', output: 'unknown', soc: null, events: {} }, true); $('generator-card').hidden = false; notice(''); $('data-time').textContent = 'Завантажуємо дані…'; }
   else render(example(mode), true);
 }
 $('refresh').addEventListener('click', () => {

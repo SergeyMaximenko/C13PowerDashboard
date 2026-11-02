@@ -41,7 +41,7 @@ h1 { font-size: clamp(27px, 3.4vw, 42px); line-height: 1.14; letter-spacing: -1.
 }
 .cards.skeleton .main-value * { color: transparent !important; }
 .cards.skeleton .secondary, .cards.skeleton .battery-mode { width: 45%; }
-.cards.skeleton .card-icon svg:not(.mascot):not(.ivscene):not(.gridscene) { animation: pulse 1.4s ease-in-out infinite; }
+.cards.skeleton .card-icon svg:not(.mascot):not(.ivscene):not(.gridscene):not(.genscene) { animation: pulse 1.4s ease-in-out infinite; }
 /* Inverter at work: gears turn inside, energy pulses run to the house, its windows glow. */
 .card-icon .ivscene { width: 100%; height: 100%; stroke-width: 0; overflow: visible; }
 .iv-fill { fill: currentColor; stroke: none; }
@@ -109,7 +109,20 @@ h1 { font-size: clamp(27px, 3.4vw, 42px); line-height: 1.14; letter-spacing: -1.
 .freshness-note { padding-left: 24px; border-left: 1px solid #c5d8ea; font-size: 13px; }
 .freshness-note svg { width: 21px; }
 .notice { padding: 14px 18px; border: 1px solid #ead5b1; color: #79551d; background: #fffaed; border-radius: 12px; margin: -9px 0 22px; line-height: 1.5; font-size: 14px; }
-.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+@media (min-width: 1200px) { .cards { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.status-card[hidden] { display: none; }
+.gen-value { overflow-wrap: normal; word-break: normal; hyphens: none; }
+@media (min-width: 1200px) and (max-width: 1420px) { .main-value.gen-value { font-size: 32px; letter-spacing: -1.2px; } }
+.card-icon .genscene { overflow: visible; width: 82%; height: 82%; }
+.gen-shake { animation: gen-shake .28s linear infinite; }
+.gen-bolt { animation: gen-bolt 1.1s ease-in-out infinite; }
+.gen-puff { fill: currentColor; stroke: none; opacity: 0; animation: gen-puff 2.1s ease-out infinite; }
+.gen-puff2 { animation-delay: .7s; }
+.gen-puff3 { animation-delay: 1.4s; }
+@keyframes gen-shake { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(.6px, .4px); } 50% { transform: translate(-.4px, -.5px); } 75% { transform: translate(.5px, -.3px); } }
+@keyframes gen-bolt { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
+@keyframes gen-puff { 0% { transform: translate(0, 0); opacity: 0; } 15% { opacity: .55; } 100% { transform: translate(6px, -14px); opacity: 0; } }
 .status-card { --accent: #708397; --tint: #f0f3f6; position: relative; min-height: 388px; padding: 26px 30px 28px; border-radius: 22px; border: 1px solid #e0e8ee; background: linear-gradient(150deg, #fff 35%, var(--tint)); box-shadow: 0 10px 26px #1c3c5510; overflow: hidden; display: flex; flex-direction: column; }
 .status-card[data-state="on"] { --accent: var(--green); --tint: #ecf8f3; }
 .status-card[data-state="off"] { --accent: var(--red); --tint: #fdf0f1; }
@@ -166,7 +179,8 @@ dialog::backdrop { background: #14273e60; backdrop-filter: blur(5px); }
   h1 { font-size: 32px; }
   .subtitle { font-size: 14px; }
   .header-actions { width: 100%; }
-  .source-pill { margin-right: auto; }
+  .source-pill { margin-right: 5px; }
+  .header-actions .icon-button { margin-left: auto; }
   .freshness { padding: 16px; gap: 12px; border-radius: 13px; margin-bottom: 18px; }
   .freshness-time { flex-wrap: wrap; gap: 8px; }
   .freshness-time strong { font-size: 14px; }

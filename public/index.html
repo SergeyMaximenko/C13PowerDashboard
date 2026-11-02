@@ -23,6 +23,9 @@
       <rect x="7" y="17" width="46" height="30" rx="6"/><path d="M57 26v12"/>
       <path d="m33 23-9 11h9l-3 8"/>
     </symbol>
+    <symbol id="i-generator" viewBox="0 0 64 64">
+      <rect x="5" y="20" width="48" height="28" rx="5"/><path d="M14 20v-5h20v5M30 26l-6 9h8l-5 9M42 27h6M42 32h6M42 37h6M11 48v5M47 48v5M53 30h4v8h-4"/>
+    </symbol>
     <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v6l4 2"/></symbol>
     <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M6 18a5 5 0 0 1-.5-10 7 7 0 0 1 13 1A4.5 4.5 0 0 1 18 18Z"/></symbol>
     <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 8a8 8 0 0 0-14-3L3 8m0-5v5h5M4 16a8 8 0 0 0 14 3l3-3m0 5v-5h-5"/></symbol>
@@ -70,8 +73,32 @@
         </div>
       </article>
 
+      <article class="status-card" id="generator-card" data-state="unknown">
+        <div class="card-top"><span class="card-index">02 / ГЕНЕРАТОР</span><span class="status-dot" aria-hidden="true"></span></div>
+        <div class="card-icon">
+          <svg id="generator-icon"><use href="#i-generator"/></svg>
+          <svg id="generator-anim" class="genscene" viewBox="0 0 64 64" aria-hidden="true" hidden>
+            <g class="gen-shake">
+              <rect x="5" y="22" width="48" height="28" rx="5"/>
+              <path d="M14 22v-5h20v5M42 29h6M42 34h6M42 39h6M11 50v5M47 50v5M53 32h4v8h-4"/>
+              <path class="gen-bolt" d="M30 28l-6 9h8l-5 9"/>
+            </g>
+            <path d="M47 22v-8h5"/>
+            <circle class="gen-puff gen-puff1" cx="55" cy="12" r="2.6"/>
+            <circle class="gen-puff gen-puff2" cx="55" cy="12" r="2.2"/>
+            <circle class="gen-puff gen-puff3" cx="55" cy="12" r="1.8"/>
+          </svg>
+        </div>
+        <h2>Генератор</h2>
+        <p class="main-value output-value gen-value" id="generator-value">Невідомо</p>
+        <div class="card-bottom">
+          <div class="load" id="generator-load" hidden><span class="secondary">Потужність генератора</span><p><strong id="generator-power">—</strong><span id="generator-unit">кВт</span></p></div>
+          <p class="secondary" id="generator-detail">Очікуємо показники</p>
+        </div>
+      </article>
+
       <article class="status-card" id="output-card" data-state="unknown">
-        <div class="card-top"><span class="card-index">02 / ІНВЕРТОР</span><span class="status-dot" aria-hidden="true"></span></div>
+        <div class="card-top"><span class="card-index">03 / ІНВЕРТОР</span><span class="status-dot" aria-hidden="true"></span></div>
         <div class="card-icon">
           <svg id="inverter-icon"><use href="#i-building"/></svg>
           <svg id="inverter-anim" class="ivscene" viewBox="0 0 80 80" aria-hidden="true" hidden>
@@ -96,7 +123,7 @@
       </article>
 
       <article class="status-card battery-card" id="battery-card" data-state="unknown">
-        <div class="card-top"><span class="card-index">03 / БАТАРЕЯ</span><span class="status-dot" aria-hidden="true"></span></div>
+        <div class="card-top"><span class="card-index">04 / БАТАРЕЯ</span><span class="status-dot" aria-hidden="true"></span></div>
         <div class="card-icon">
           <svg id="battery-icon"><use href="#i-battery"/></svg>
           <svg id="battery-mascot" class="mascot" viewBox="34 -4 116 124" aria-hidden="true" hidden>
@@ -145,6 +172,7 @@
           <option value="on">Приклад: мережа є</option>
           <option value="standby">Приклад: режим очікування</option>
           <option value="output-off">Приклад: немає напруги на виході</option>
+          <option value="generator">Приклад: працює генератор</option>
           <option value="stale">Приклад: дані застаріли</option>
           <option value="loading">Приклад: завантаження</option>
         </select>

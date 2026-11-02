@@ -1,7 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { gridState, transitions, parseTime, summarize, previousDay } from '../lib/domain.mjs';
-const off = { GridVoltageL1: 0, GridVoltageL2: 0, GridVoltageL3: 0, GridFrequency: 0 };
+import { gridState, transitions, parseTime, summarize, previousDay, generatorInfo } from '../lib/domain.mjs';
+test('generator: running by voltage or power, ignores counters and PV generation', () => {
+  assert.equal(generatorInfo({ GridVoltageL1: 0 }).state, 'unknown');
+  assert.equal(generatorInfo({ GenVoltageL1: 0, GenPowerL1: 0, TotalGenPower: 0 }).state, 'off');
+  assert.equal(generatorInfo({ GenVoltageL1: 231, GenPowerL1: 0 }).state, 'on');
+  assert.equal(generatorInfo({ GenVoltageL1: 0, TotalGenPower: 5200 }).state, 'on');
+  assert.equal(generatorInfo({ GenVoltageL1: 0, TotalGenPower: 20 }).state, 'off');
+  assert.equal(generatorInfo({ GenVoltageL1: 0, GenDailyRunTime: 3, DailyProductionGenerator: 40 }).state, 'off');
+  assert.equal(generatorInfo({ GenerationPower: 9000 }).state, 'unknown');
+  // Real Deye keys (HV three-phase inverter, generator on the GEN input).
+  const running = { GenPowerL1: 20033, GenPowerL2: 13664, GenPowerL3: 14280, GenVoltageL1: 230.8, GenVoltageL2: 237.2, GenVoltageL3: 240.4,
+    GeneratorActivePower: 47977, TotalGeneratorPower: 47977, TotalGeneratorProduction: 181, DailyChargingEnergy: 58 };
+  assert.deepEqual(generatorInfo(running), { state: 'on', powerW: 47977, voltageV: 240.4 });
+  assert.equal(generatorInfo({ ...running, GenPowerL1: 0, GenPowerL2: 0, GenPowerL3: 0, GenVoltageL1: 0, GenVoltageL2: 0, GenVoltageL3: 0,
+    GeneratorActivePower: 0, TotalGeneratorPower: 0 }).state, 'off');
+});
+const off ={ GridVoltageL1: 0, GridVoltageL2: 0, GridVoltageL3: 0, GridFrequency: 0 };
 test('three phases, missing values, power alone and single phase', () => {
   assert.equal(gridState(off), 'off');
   assert.equal(gridState({ ...off, GridVoltageL1: 230 }), 'unstable');
