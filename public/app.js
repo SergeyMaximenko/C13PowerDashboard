@@ -130,7 +130,7 @@ function render(data, example = false) {
   const operation = inverterState(data, stale);
   $('output-card').dataset.state = ({ supplying: 'on', charging: 'on', standby: 'standby', off: 'off', unknown: 'unknown' })[operation];
   $('output-value').textContent = ({
-    supplying: generator === 'on' ? 'Будинок живиться від генератора' : 'Будинок живиться від інвертора',
+    supplying: generator === 'on' ? 'Будинок живиться від генератора' : 'Будинок живиться від батареї',
     charging: 'Інвертор заряджає акумулятор',
     standby: 'Інвертор у режимі очікування',
     off: 'Немає напруги на виході',
@@ -172,6 +172,8 @@ function render(data, example = false) {
     ' · ' + decimal.format(batteryWatts < 1000 ? batteryWatts : batteryWatts / 1000) + (batteryWatts < 1000 ? ' Вт' : ' кВт');
   $('battery-mode').textContent = stale ? 'Немає актуальних показників' :
     (({ discharging: 'Розряджається', charging: 'Заряджається', idle: 'У режимі очікування', unknown: 'Стан заряду невідомий' })[data.batteryMode] || 'Стан заряду невідомий') + batteryPower;
+  // Warning for residents: the battery feeds the house and will switch off at 15%.
+  $('battery-warning').hidden = !(!stale && grid === 'off' && data.batteryMode === 'discharging');
   $('update-note').textContent = example ? 'Демонстраційні значення для перегляду оформлення' : '';
   notice(example ? 'Приклад відображення — це не поточні показники будинку.' :
     stale ? (data.collectedAt

@@ -112,6 +112,10 @@ h1 { font-size: clamp(27px, 3.4vw, 42px); line-height: 1.14; letter-spacing: -1.
 .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
 @media (min-width: 1200px) { .cards { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .status-card[hidden] { display: none; }
+.battery-warning { margin-top: 14px; color: var(--red); font-size: 14px; line-height: 1.5; }
+.battery-warning strong { display: block; font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.battery-warning p { margin: 0 0 6px; }
+.cards.skeleton .battery-warning { display: none; }
 .gen-value { overflow-wrap: normal; word-break: normal; hyphens: none; }
 @media (min-width: 1200px) and (max-width: 1420px) { .main-value.gen-value { font-size: 32px; letter-spacing: -1.2px; } }
 .card-icon .genscene { overflow: visible; width: 82%; height: 82%; }
