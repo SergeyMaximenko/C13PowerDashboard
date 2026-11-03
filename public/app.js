@@ -126,7 +126,7 @@ function render(data, example = false) {
   $('generator-unit').textContent = Number.isFinite(generatorWatts) && generatorWatts < 1000 ? 'Вт' : 'кВт';
   $('generator-detail').textContent = generator === 'on'
     ? (Number.isFinite(data.generator?.voltageV) ? 'Напруга генератора: ' + Math.round(data.generator.voltageV) + ' В' : 'Напруга є')
-    : generatorKnown ? 'Генератор не запущений' : 'Немає актуальних показників';
+    : generatorKnown ? 'Генератор в режимі очікування' : 'Немає актуальних показників';
   const operation = inverterState(data, stale);
   $('output-card').dataset.state = ({ supplying: 'on', charging: 'on', standby: 'standby', off: 'off', unknown: 'unknown' })[operation];
   $('output-value').textContent = ({
