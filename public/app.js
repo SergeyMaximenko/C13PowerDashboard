@@ -108,10 +108,13 @@ function render(data, example = false) {
     grid === 'unstable' ? 'Перевірте стан фаз' : 'Немає актуальних показників';
   const event = data.historyError || data.historyAvailable === false ? null :
     grid === 'on' ? data.events?.appeared : grid === 'off' ? data.events?.disappeared : null;
+  // The history only says that the state changed between two measurements (from..to). The midpoint is misleading after a gap in the data
+  // (e.g. the link was lost), so the later measurement minus one minute is shown: the state had certainly changed by then.
+  const eventAt = event ? (Number.isFinite(event.to) ? event.to - 60000 : event.at) : null;
   $('grid-event').hidden = !event;
   $('grid-event').textContent = event ? (grid === 'on' ? 'З’явилася ≈ ' : 'Зникла ≈ ') +
-    (date.format(event.at) !== date.format(data.collectedAt) ? date.format(event.at) + ', ' : '') + clock.format(Math.round(event.at / 60000) * 60000) : '';
-  displayedGridEvent = event && !stale ? { at: event.at, measuredAt: data.collectedAt, grid } : null;
+    (date.format(eventAt) !== date.format(data.collectedAt) ? date.format(eventAt) + ', ' : '') + clock.format(Math.round(eventAt / 60000) * 60000) : '';
+  displayedGridEvent = event && !stale ? { at: eventAt, measuredAt: data.collectedAt, grid } : null;
   updateGridDuration();
   // Generator on the GEN input: shown only when the data says so (hidden when unknown or stale).
   const generator = stale ? 'unknown' : data.generator?.state;
