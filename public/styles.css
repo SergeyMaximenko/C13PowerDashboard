@@ -265,6 +265,7 @@ dialog::backdrop { background: #14273e60; backdrop-filter: blur(5px); }
 @media (max-width: 760px) {
   #data-elapsed { width: auto; padding: 5px 10px; }
 }
+#data-elapsed[data-state="warn"] { background: #fff0ce; border-color: #ead5b1; color: #866118; }
 
 .install-help-button {
   margin-top: 18px; border: 1px solid #cadce7; border-radius: 11px;

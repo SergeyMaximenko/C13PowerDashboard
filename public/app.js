@@ -3,6 +3,8 @@ const $ = id => document.getElementById(id);
 const clock = new Intl.DateTimeFormat('uk-UA', { timeZone: 'Europe/Kyiv', hour: '2-digit', minute: '2-digit' });
 const date = new Intl.DateTimeFormat('uk-UA', { timeZone: 'Europe/Kyiv', day: '2-digit', month: '2-digit' });
 const decimal = new Intl.NumberFormat('uk-UA', { maximumFractionDigits: 1 });
+const STALE_AFTER_MS = 30 * 60000; // older data is "unknown" (keep equal to STALE_MS in lib/domain.mjs)
+const WARN_AFTER_MS = 15 * 60000;  // the "Пройшло …" badge turns yellow
 let snapshot = null, loading = false, requestVersion = 0, lastLoadedAt = 0, retries = 0;
 let displayedMeasurementTime = null;
 let displayedGridEvent = null;
@@ -54,13 +56,15 @@ function updateMeasurementAge() {
   const element = $('data-elapsed');
   element.textContent = measurementAge(displayedMeasurementTime);
   element.hidden = !element.textContent;
+  // Yellow once the data is older than 15 minutes (a normal delay is about 5 minutes).
+  element.dataset.state = Number.isFinite(displayedMeasurementTime) && Date.now() - displayedMeasurementTime > WARN_AFTER_MS ? 'warn' : '';
 }
 function updateGridDuration() {
   const badge = $('grid-duration');
   const now = Date.now();
   const event = displayedGridEvent;
   const valid = event && Number.isFinite(event.at) && event.at > 0 && event.at <= event.measuredAt &&
-    Number.isFinite(event.measuredAt) && now >= event.measuredAt && now - event.measuredAt <= 3600000;
+    Number.isFinite(event.measuredAt) && now >= event.measuredAt && now - event.measuredAt <= STALE_AFTER_MS;
   badge.hidden = !valid;
   badge.textContent = valid ? (event.grid === 'on' ? 'Є вже ≈ ' : 'Немає вже ≈ ') +
     measurementAge(event.at, now).replace(/^Пройшло /, '') : '';
@@ -87,7 +91,7 @@ function measurementDateLabel(timestamp, now = Date.now()) {
 function render(data, example = false) {
   displayedMeasurementTime = data.collectedAt ?? null;
   updateMeasurementAge();
-  const stale = data.stale || !data.collectedAt || Date.now() - data.collectedAt > 3600000;
+  const stale = data.stale || !data.collectedAt || Date.now() - data.collectedAt > STALE_AFTER_MS;
   const grid = stale ? 'unknown' : data.grid;
   const output = stale ? 'unknown' : data.output;
   const soc = stale ? null : data.soc;
@@ -111,14 +115,15 @@ function render(data, example = false) {
   updateGridDuration();
   // Generator on the GEN input: shown only when the data says so (hidden when unknown or stale).
   const generator = stale ? 'unknown' : data.generator?.state;
-  const generatorKnown = generator === 'on' || generator === 'off';
+  const generatorKnown = generator === 'on' || generator === 'starting' || generator === 'off';
   // The card appears once the station has reported generator data (stations without a generator never show it).
   if (generatorKnown) $('generator-card').dataset.seen = '1';
   $('generator-card').hidden = !$('generator-card').dataset.seen;
-  $('generator-card').dataset.state = generator === 'on' ? 'on' : generatorKnown ? 'standby' : 'unknown';
-  $('generator-value').textContent = generator === 'on' ? 'Працює' : generatorKnown ? 'Зупинений' : 'Невідомо';
-  setHidden($('generator-icon'), generator === 'on');
-  setHidden($('generator-anim'), generator !== 'on');
+  // "starting": the generator runs (voltage is present) but the inverter has not taken it yet, the battery still feeds the house.
+  $('generator-card').dataset.state = generator === 'on' ? 'on' : generator === 'starting' ? 'unstable' : generatorKnown ? 'standby' : 'unknown';
+  $('generator-value').textContent = generator === 'on' ? 'Працює' : generator === 'starting' ? 'Готується до роботи' : generatorKnown ? 'Зупинений' : 'Невідомо';
+  setHidden($('generator-icon'), generator === 'on' || generator === 'starting');
+  setHidden($('generator-anim'), generator !== 'on' && generator !== 'starting');
   $('generator-load').hidden = generator !== 'on';
   const generatorWatts = data.generator?.powerW;
   $('generator-power').textContent = !Number.isFinite(generatorWatts) ? '—' :
@@ -126,6 +131,7 @@ function render(data, example = false) {
   $('generator-unit').textContent = Number.isFinite(generatorWatts) && generatorWatts < 1000 ? 'Вт' : 'кВт';
   $('generator-detail').textContent = generator === 'on'
     ? (Number.isFinite(data.generator?.voltageV) ? 'Напруга генератора: ' + Math.round(data.generator.voltageV) + ' В' : 'Напруга є')
+    : generator === 'starting' ? 'Генератор запущено, чекаємо підключення'
     : generatorKnown ? 'Генератор в режимі очікування' : 'Немає актуальних показників';
   const operation = inverterState(data, stale);
   $('output-card').dataset.state = ({ supplying: 'on', charging: 'on', standby: 'standby', off: 'off', unknown: 'unknown' })[operation];
@@ -186,11 +192,12 @@ function render(data, example = false) {
 function example(mode) {
   const now = Date.now();
   const mains = mode === 'on' || mode === 'standby';
-  return { station: { name: 'Чавдар 13' }, collectedAt: now - (mode === 'stale' ? 3660000 : 300000),
+  return { station: { name: 'Чавдар 13' }, collectedAt: now - (mode === 'stale' ? 1860000 : 300000),
     stale: mode === 'stale', grid: mains ? 'on' : 'off', output: mode === 'output-off' ? 'off' : 'on',
     allPhasesZero: !mains, soc: mode === 'on' ? 82 : mode === 'standby' ? 100 : mode === 'output-off' ? 10 : 61,
     batteryMode: mode === 'on' || mode === 'generator' ? 'charging' : ['standby', 'output-off'].includes(mode) ? 'idle' : 'discharging',
-    generator: { state: mode === 'generator' ? 'on' : 'off', powerW: mode === 'generator' ? 22000 : 0, voltageV: mode === 'generator' ? 230 : 0 },
+    generator: { state: mode === 'generator' ? 'on' : mode === 'generator-start' ? 'starting' : 'off',
+      powerW: mode === 'generator' ? 22000 : 0, voltageV: mode === 'generator' || mode === 'generator-start' ? 235 : 0 },
     loadWatts: mains || mode === 'output-off' ? 0 : 16800,
     batteryWatts: mode === 'on' || mode === 'generator' ? -33200 : ['standby', 'output-off'].includes(mode) ? 0 : 17100,
     events: { appeared: { at: now - 3600000 }, disappeared: { at: now - 10800000 } } };
@@ -273,7 +280,7 @@ refresh();
 // to the page after a while (at most once a minute), so an idle page makes no requests.
 setInterval(() => { updateMeasurementAge(); updateGridDuration(); }, 1000);
 setInterval(() => {
-  if (!isExample() && snapshot && Date.now() - snapshot.collectedAt > 3600000) render(snapshot);
+  if (!isExample() && snapshot && Date.now() - snapshot.collectedAt > STALE_AFTER_MS) render(snapshot);
 }, 15000);
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && Date.now() - lastLoadedAt > 60000) refresh();

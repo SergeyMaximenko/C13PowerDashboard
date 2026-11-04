@@ -41,6 +41,18 @@ test('both transitions, unordered input, no fabricated start, unknown gaps', () 
   assert.deepEqual(result.disappeared, { from: 100, to: 200, at: 150 });
   assert.deepEqual(result.appeared, { from: 200, to: 400, at: 300 });
 });
+test('generator: starting (voltage but battery still feeds the house), working, idle, unknown', () => {
+  const now = Date.parse('2026-11-04T12:00:00+02:00');
+  const state = values => summarize({ id: '1', name: 'T' }, {}, [{ collectionTime: now / 1000,
+    dataList: Object.entries({ GridVoltageL1: 0, GridVoltageL2: 0, GridVoltageL3: 0, GridFrequency: 0, SOC: 60, ...values })
+      .map(([key, value]) => ({ key, value })) }], now).generator;
+  const volts = { GenVoltageL1: 235, GenVoltageL2: 235, GenVoltageL3: 235 };
+  assert.equal(state({ ...volts, TotalGeneratorPower: 0, BatteryPower: 17000 }).state, 'starting');
+  assert.equal(state({ ...volts, TotalGeneratorPower: 47977, BatteryPower: -33000 }).state, 'on');
+  assert.equal(state({ ...volts, TotalGeneratorPower: 500, BatteryPower: 0 }).state, 'on');
+  assert.equal(state({ GenVoltageL1: 0, TotalGeneratorPower: 0, BatteryPower: 17000 }).state, 'off');
+  assert.equal(state({ BatteryPower: 17000 }).state, 'unknown');
+});
 test('fresh inverter overrides older station battery, stale hides all live states', () => {
   const now = Date.parse('2026-10-21T15:34:30+03:00');
   const device = { collectionTime: now / 1000, dataList: Object.entries({
@@ -51,9 +63,9 @@ test('fresh inverter overrides older station battery, stale hides all live state
   assert.equal(data.grid, 'off'); assert.equal(data.output, 'on');
   assert.equal(data.soc, 60); assert.equal(data.loadWatts, 16833);
   assert.equal(data.batteryMode, 'discharging');
-  assert.equal(summarize({}, {}, [device], now + 59 * 60000).stale, false);
-  assert.equal(summarize({}, {}, [device], now + 60 * 60000).stale, false);
-  const stale = summarize({}, {}, [device], now + 61 * 60000);
+  assert.equal(summarize({}, {}, [device], now + 29 * 60000).stale, false);
+  assert.equal(summarize({}, {}, [device], now + 30 * 60000).stale, false);
+  const stale = summarize({}, {}, [device], now + 31 * 60000);
   assert.equal(stale.grid, 'unknown'); assert.equal(stale.soc, null); assert.equal(stale.loadWatts, null);
   assert.equal(summarize({}, {}, [device, { dataList: [] }], now).grid, 'unknown');
 });
