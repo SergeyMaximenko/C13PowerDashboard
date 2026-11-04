@@ -183,10 +183,10 @@ function render(data, example = false) {
   $('update-note').textContent = example ? 'Демонстраційні значення для перегляду оформлення' : '';
   notice(example ? 'Приклад відображення — це не поточні показники будинку.' :
     stale ? (data.collectedAt
-      ? 'Немає зв’язку з інвертором. Останні дані були ' +
-        (date.format(data.collectedAt) !== date.format(Date.now()) ? date.format(data.collectedAt) + ', ' : '') +
-        clock.format(data.collectedAt) + ', тому поточний стан живлення невідомий.'
-      : 'Немає даних від інвертора. Поточний стан живлення невідомий.') :
+      ? 'Немає зв’язку з інвертором. Можливо, у підвалі, де він встановлений, пропав інтернет. Останні дані були ' +
+        (date.format(data.collectedAt) !== date.format(Date.now()) ? date.format(data.collectedAt) + ' ' : '') +
+        'о ' + clock.format(data.collectedAt) + ', тому поточний стан світла невідомий.'
+      : 'Немає даних від інвертора. Можливо, у підвалі, де він встановлений, пропав інтернет. Поточний стан світла невідомий.') :
     '');
 }
 function example(mode) {
