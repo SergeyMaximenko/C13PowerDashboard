@@ -118,7 +118,8 @@ function render(data, example = false) {
   const generatorKnown = generator === 'on' || generator === 'starting' || generator === 'off';
   // The card appears once the station has reported generator data (stations without a generator never show it).
   if (generatorKnown) $('generator-card').dataset.seen = '1';
-  $('generator-card').hidden = !$('generator-card').dataset.seen;
+  // With stale data every tile is "unknown", so the generator tile stays too (otherwise it would vanish exactly when the link is lost).
+  $('generator-card').hidden = !$('generator-card').dataset.seen && !stale;
   // "starting": the generator runs (voltage is present) but the inverter has not taken it yet, the battery still feeds the house.
   $('generator-card').dataset.state = generator === 'on' ? 'on' : generator === 'starting' ? 'unstable' : generatorKnown ? 'standby' : 'unknown';
   $('generator-value').textContent = generator === 'on' ? 'Працює' : generator === 'starting' ? 'Готується до роботи' : generatorKnown ? 'Зупинений' : 'Невідомо';
