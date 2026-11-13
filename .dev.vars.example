@@ -1,0 +1,7 @@
+# Скопіюйте цей файл у .dev.vars (він у .gitignore) і впишіть свої значення.
+DEYE_APP_ID=
+DEYE_APP_SECRET=
+DEYE_LOGIN=
+DEYE_PASSWORD=
+# Пароль звіту про генератор (/api/generator*). Порожній або відсутній — звіт відкритий.
+REPORT_PASSWORD=

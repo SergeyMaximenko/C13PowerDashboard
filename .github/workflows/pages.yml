@@ -1,0 +1,39 @@
+name: Publish dashboard
+# Сторінка сама читає дані з Cloudflare Worker, тому секрети Deye тут не потрібні.
+# Публікація запускається після кожного push у main і вручну (Run workflow).
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm test
+      - name: Prepare page
+        run: npm run build
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+          retention-days: 1
+      - name: Publish
+        id: deployment
+        uses: actions/deploy-pages@v4

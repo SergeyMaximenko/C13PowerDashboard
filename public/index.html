@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="dashboard-api" content="https://c13-power.sergeymaximenko.workers.dev">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f7fa">
+  <meta name="description" content="Електроживлення Чавдар 13: мережа, вихід інвертора та заряд батареї.">
+  <title>Чавдар 13 · Електроживлення</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <svg class="svg-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-grid" viewBox="0 0 64 64">
+      <path d="M29 5h6l14 54M29 5 15 59M19 59h26M25 19h14M22 32h20M18 46h28M25 19l17 13M39 19 22 32M22 32l24 14M42 32 18 46M18 46l27 13M46 46 19 59M25 16 12 25h40L39 16M21 29 7 38h50L43 29M12 25v7M52 25v7M7 38v7M57 38v7"/>
+    </symbol>
+    <symbol id="i-building" viewBox="0 0 64 64">
+      <path d="M7 57V15h29v42M12 15V8h19v7M3 57h38M20 57V44h8v13M15 24h3m9 0h3m-15 9h3m9 0h3M46 22v10m10-10v10M43 32h16v5a8 8 0 0 1-16 0zM51 45v6a6 6 0 0 1-6 6h-4"/>
+    </symbol>
+    <symbol id="i-battery" viewBox="0 0 64 64">
+      <rect x="7" y="17" width="46" height="30" rx="6"/><path d="M57 26v12"/>
+      <path d="m33 23-9 11h9l-3 8"/>
+    </symbol>
+    <symbol id="i-generator" viewBox="0 0 64 64">
+      <rect x="5" y="20" width="48" height="28" rx="5"/><path d="M14 20v-5h20v5M30 26l-6 9h8l-5 9M42 27h6M42 32h6M42 37h6M11 48v5M47 48v5M53 30h4v8h-4"/>
+    </symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v6l4 2"/></symbol>
+    <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M6 18a5 5 0 0 1-.5-10 7 7 0 0 1 13 1A4.5 4.5 0 0 1 18 18Z"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 8a8 8 0 0 0-14-3L3 8m0-5v5h5M4 16a8 8 0 0 0 14 3l3-3m0 5v-5h-5"/></symbol>
+  </svg>
+
+  <main class="dashboard">
+    <header class="header">
+      <div class="identity">
+        <div class="brandmark" aria-hidden="true">13<span>POWER</span></div>
+        <div>
+          <p class="eyebrow">C13 POWER DASHBOARD</p>
+          <h1 id="station-name">Чавдар 13</h1>
+          <p class="subtitle">Електроживлення будинку</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <span class="source-pill" id="source-pill"><span class="source-dot"></span><span id="source-text">Deye Cloud</span></span>
+        <button class="icon-button" id="refresh" title="Оновити дані" aria-label="Оновити дані"><svg><use href="#i-refresh"/></svg></button>
+      </div>
+    </header>
+
+    <section class="freshness" aria-label="Час даних">
+      <div class="freshness-time"><svg><use href="#i-clock"/></svg><strong id="data-time">Очікуємо дані</strong><span id="data-elapsed" title="Час, що минув від вимірювання Deye" hidden></span></div>
+      <div class="freshness-note"><svg><use href="#i-cloud"/></svg><span class="note-text">Хмарні дані надходять із затримкою близько 5 хв</span><span class="loading-dots" aria-hidden="true"><i></i><i></i><i></i></span></div>
+    </section>
+    <div class="notice" id="notice" role="status" hidden></div>
+
+    <section class="cards" aria-label="Показники електроживлення" aria-live="polite" aria-atomic="true">
+      <article class="status-card" id="grid-card" data-state="unknown">
+        <div class="card-top"><span class="card-index">01 / МЕРЕЖА</span><span class="status-dot" aria-hidden="true"></span></div>
+        <div class="card-icon">
+          <svg id="grid-icon"><use href="#i-grid"/></svg>
+          <svg id="grid-anim" class="gridscene" viewBox="0 0 64 64" aria-hidden="true" hidden>
+            <g class="gw-sway"><path class="gw gw1" d="M15 26Q7 25 0 29M49 26Q57 25 64 29"/></g>
+            <g class="gw-sway gw-b"><path class="gw gw2" d="M10.8 37Q5 37 0 41M53.2 37Q59 37 64 41"/></g>
+            <g transform="translate(4.8 4.8) scale(.85)"><use href="#i-grid"/></g>
+          </svg>
+        </div>
+        <h2>Мережа на вході</h2>
+        <p class="main-value" id="grid-value">Невідомо</p>
+        <div class="card-bottom">
+          <p class="event-time" id="grid-event" hidden></p>
+          <span id="grid-duration" class="grid-duration" hidden></span>
+          <p class="secondary" id="grid-detail">Очікуємо показники</p>
+        </div>
+      </article>
+
+      <article class="status-card" id="generator-card" data-state="unknown">
+        <div class="card-top"><span class="card-index">02 / ГЕНЕРАТОР</span><span class="status-dot" aria-hidden="true"></span></div>
+        <div class="card-icon">
+          <svg id="generator-icon"><use href="#i-generator"/></svg>
+          <svg id="generator-anim" class="genscene" viewBox="0 0 64 64" aria-hidden="true" hidden>
+            <g class="gen-shake">
+              <rect x="5" y="22" width="48" height="28" rx="5"/>
+              <path d="M14 22v-5h20v5M42 29h6M42 34h6M42 39h6M11 50v5M47 50v5M53 32h4v8h-4"/>
+              <path class="gen-bolt" d="M30 28l-6 9h8l-5 9"/>
+            </g>
+            <path d="M47 22v-8h5"/>
+            <circle class="gen-puff gen-puff1" cx="55" cy="12" r="2.6"/>
+            <circle class="gen-puff gen-puff2" cx="55" cy="12" r="2.2"/>
+            <circle class="gen-puff gen-puff3" cx="55" cy="12" r="1.8"/>
+          </svg>
+        </div>
+        <h2>Генератор</h2>
+        <p class="main-value output-value gen-value" id="generator-value">Невідомо</p>
+        <div class="card-bottom">
+          <div class="load" id="generator-load" hidden><span class="secondary">Потужність генератора</span><p><strong id="generator-power">—</strong><span id="generator-unit">кВт</span></p></div>
+          <p class="secondary" id="generator-detail">Очікуємо показники</p>
+          <a class="card-link" id="generator-details" href="./generator.html">Деталі по генератору <span aria-hidden="true">→</span></a>
+        </div>
+      </article>
+
+      <article class="status-card" id="output-card" data-state="unknown">
+        <div class="card-top"><span class="card-index">03 / ІНВЕРТОР</span><span class="status-dot" aria-hidden="true"></span></div>
+        <div class="card-icon">
+          <svg id="inverter-icon"><use href="#i-building"/></svg>
+          <svg id="inverter-anim" class="ivscene" viewBox="0 0 80 80" aria-hidden="true" hidden>
+            <defs>
+              <g id="iv-gear-shape">
+                <circle class="iv-fill" r="13"/>
+                <rect class="iv-fill" x="-3.5" y="-21" width="7" height="9" rx="1.5"/><rect class="iv-fill" x="-3.5" y="12" width="7" height="9" rx="1.5"/><rect class="iv-fill" x="-21" y="-3.5" width="9" height="7" rx="1.5"/><rect class="iv-fill" x="12" y="-3.5" width="9" height="7" rx="1.5"/>
+                <g transform="rotate(45)"><rect class="iv-fill" x="-3.5" y="-21" width="7" height="9" rx="1.5"/><rect class="iv-fill" x="-3.5" y="12" width="7" height="9" rx="1.5"/><rect class="iv-fill" x="-21" y="-3.5" width="9" height="7" rx="1.5"/><rect class="iv-fill" x="12" y="-3.5" width="9" height="7" rx="1.5"/></g>
+                <circle class="iv-hole" r="4.5"/>
+              </g>
+            </defs>
+            <g class="iv-building" transform="translate(2 6) scale(1.15)"><path d="M7 57V15h29v42M12 15V8h19v7M3 57h38M20 57V44h8v13M15 24h3m9 0h3m-15 9h3m9 0h3"/></g>
+            <circle class="iv-hole" cx="50" cy="58" r="21"/>
+            <circle class="iv-hole" cx="65" cy="28" r="14"/>
+            <g transform="translate(50 58) scale(.92)"><g class="iv-gear"><use href="#iv-gear-shape"/></g></g>
+            <g transform="translate(65 28) scale(.62)"><g class="iv-gear rev"><use href="#iv-gear-shape"/></g></g>
+          </svg>
+        </div>
+        <h2>Робота інвертора</h2>
+        <p class="main-value output-value" id="output-value">Стан невідомий</p>
+        <div class="card-bottom">
+          <div class="load" id="load" hidden><span class="secondary">Споживання з інвертору</span><p><strong id="load-value">—</strong><span id="load-unit">кВт</span></p></div>
+          <p class="secondary" id="output-detail">Очікуємо показники</p>
+        </div>
+      </article>
+
+      <article class="status-card battery-card" id="battery-card" data-state="unknown">
+        <div class="card-top"><span class="card-index">04 / БАТАРЕЯ</span><span class="status-dot" aria-hidden="true"></span></div>
+        <div class="card-icon">
+          <svg id="battery-icon"><use href="#i-battery"/></svg>
+          <svg id="battery-mascot" class="mascot" viewBox="34 -4 116 124" aria-hidden="true" hidden>
+            <g id="mascot-charging" hidden>
+              <path class="m-line" d="M85 20C85 6 112 12 118 14"/>
+              <rect class="m-plug" x="116" y="8" width="14" height="12" rx="2"/>
+              <path class="m-line m-plug-line" d="M130 11h5M130 17h5"/>
+              <g class="m-hop">
+                <rect class="m-body" x="55" y="24" width="60" height="84" rx="10"/>
+                <rect x="75" y="18" width="20" height="6" rx="2" fill="currentColor"/>
+                <rect class="m-lvl" x="60" y="29" width="50" height="74" rx="6"/>
+                <path class="m-face" d="M68 54q5-8 10 0M92 54q5-8 10 0"/>
+                <path class="m-mouth" d="M72 68Q85 88 98 68Z"/>
+              </g>
+              <path class="m-spark m-sp1" d="M40 40l-6 10h5l-3 9 9-12h-6z"/>
+              <path class="m-spark m-sp2" d="M128 54l-5 8h4l-2 7 7-10h-5z"/>
+            </g>
+            <g id="mascot-sleeping" hidden>
+              <g class="m-sway">
+                <rect class="m-body" x="55" y="24" width="60" height="84" rx="10"/>
+                <rect x="75" y="18" width="20" height="6" rx="2" fill="currentColor"/>
+                <rect class="m-lvl" x="60" y="29" width="50" height="74" rx="6"/>
+                <path class="m-face" d="M67 54h12M91 54h12"/>
+                <path class="m-face" d="M77 74q8-5 16 0"/>
+              </g>
+              <path class="m-z m-z1" d="M118 26h8l-8 10h8"/>
+              <path class="m-z m-z2" d="M110 16h11l-11 14h11" style="stroke-width:3.4"/>
+            </g>
+          </svg>
+        </div>
+        <h2>Стан батареї</h2>
+        <p class="main-value battery-value"><span id="soc-value">—</span><span class="percent" id="soc-percent" hidden>%</span></p>
+        <div class="card-bottom">
+          <progress id="battery-progress" max="100" value="0" aria-label="Стан батареї" hidden></progress>
+          <p class="battery-mode" id="battery-mode">Очікуємо показники</p>
+          <div class="battery-warning" id="battery-warning" role="alert" hidden>
+            <strong>Зверніть увагу!</strong>
+            <p>Будинок живиться від батареї.</p>
+            <p>Коли заряд опуститься нижче <b>25%</b>, має запуститися генератор.</p>
+            <p>Якщо генератор не запуститься, при заряді <b>15%</b> батарея вимкнеться: у будинку не буде світла і ліфти зупиняться.</p>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <footer class="controls">
+      <span id="update-note"></span>
+      <label for="view-mode" id="demo-control">Перегляд
+        <select id="view-mode">
+          <option value="live">Реальні дані</option>
+          <option value="off">Приклад: мережі немає</option>
+          <option value="on">Приклад: мережа є</option>
+          <option value="standby">Приклад: режим очікування</option>
+          <option value="output-off">Приклад: немає напруги на виході</option>
+          <option value="generator">Приклад: працює генератор</option>
+          <option value="generator-start">Приклад: генератор готується</option>
+          <option value="stale">Приклад: дані застаріли</option>
+          <option value="loading">Приклад: завантаження</option>
+        </select>
+      </label>
+    </footer>
+    <button type="button" class="install-help-button" id="open-install-help" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 5h4M11 19h2"/></svg><span>Як додати на робочий стіл iPhone</span></button>
+  </main>
+  <dialog id="install-help" aria-labelledby="install-help-title">
+    <div class="dialog-heading">
+      <div><p class="eyebrow">ЗАВЖДИ ПІД РУКОЮ</p><h2 id="install-help-title">Додайте «Чавдар 13» на iPhone</h2></div>
+      <button class="close-button" id="close-install-help" aria-label="Закрити інструкцію" autofocus>×</button>
+    </div>
+    <p class="dialog-intro">Відкрийте <a href="https://sergeymaximenko.github.io/C13PowerDashboard/" target="_blank" rel="noopener">дашборд у Safari</a>. Потім натисніть виділені кнопки.</p>
+    <ol class="install-steps">
+      <li>
+        <h3><span>1</span> Відкрийте меню «…»</h3>
+        <p>Кнопка праворуч унизу Safari.</p>
+        <figure class="install-shot shot-menu">
+          <img src="./iphone-step-1.png" alt="Панель Safari: кнопка з трьома крапками праворуч унизу виділена рамкою." width="500" height="430">
+
+        </figure>
+      </li>
+      <li>
+        <h3><span>2</span> Натисніть «Поширити»</h3>
+        <p>Перший пункт відкритого меню.</p>
+        <figure class="install-shot shot-share">
+          <img src="./iphone-step-2.png" alt="Меню Safari: верхній пункт «Поширити» виділений рамкою." width="883" height="926">
+
+        </figure>
+      </li>
+      <li>
+        <h3><span>3</span> «На Початковий екран»</h3>
+        <p>За потреби прокрутіть список дій униз.</p>
+        <figure class="install-shot shot-home">
+          <img src="./iphone-step-3.png" alt="Список дій: пункт «На Початковий екран» унизу виділений рамкою." width="525" height="766">
+
+        </figure>
+      </li>
+    </ol>
+    <p class="install-finish"><strong>Завершення:</strong> залиште назву «Чавдар 13» і натисніть <strong>«Додати»</strong>. Якщо є перемикач «Відкривати як вебзастосунок», увімкніть його.</p>
+    <p class="secondary">На початковому екрані з’явиться значок дашборда. Для свіжих показників потрібен інтернет.</p>
+  </dialog>
+</body>
+</html>

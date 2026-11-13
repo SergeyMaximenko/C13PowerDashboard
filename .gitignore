@@ -1,0 +1,11 @@
+.local/
+node_modules/
+test-results/
+*.log
+.env
+.env.*
+!.env.example
+.dev.vars
+.wrangler/
+deye-settings.json
+dist/

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="dashboard-api" content="https://c13-power.sergeymaximenko.workers.dev">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f7fa">
+  <meta name="description" content="Звіт про роботу генератора Чавдар 13: по днях, із заправками.">
+  <title>Чавдар 13 · Генератор</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./generator.css">
+  <script type="module" src="./generator.js"></script>
+</head>
+<body>
+  <main class="page" id="report" data-state="loading" data-first="1" data-boot="1">
+    <nav class="top-link"><a href="./">← Електроживлення Чавдар 13</a></nav>
+
+    <header class="header">
+      <h1>Генератор · Чавдар 13</h1>
+      <p class="sub">Робота генератора по днях і з останньої заправки. Час за Києвом, точність ± 5 хв.</p>
+    </header>
+
+    <section class="auth" id="auth" hidden>
+      <h2>Потрібен пароль</h2>
+      <form id="auth-form">
+        <input type="password" id="password" autocomplete="current-password" placeholder="Пароль" aria-label="Пароль" required>
+        <button type="submit" class="primary" id="auth-submit">Увійти</button>
+        <a class="auth-back" href="./">← Повернутися назад</a>
+      </form>
+      <p class="auth-error" id="auth-error" role="alert"></p>
+    </section>
+
+    <section class="since" id="since" aria-live="polite">
+      <div class="since-label">Відпрацював з останньої заправки</div>
+      <div class="since-value" id="since-value">…</div>
+      <div class="facts" id="since-facts" hidden></div>
+      <div class="since-detail" id="since-detail"></div>
+    </section>
+
+    <section class="analysis" id="analysis" aria-labelledby="analysis-title">
+      <h2 id="analysis-title">Аналіз по заданому періоду</h2>
+      <form class="controls" id="controls">
+        <div class="controls-title">За скільки днів аналізувати</div>
+        <div class="presets" role="group" aria-label="Швидкий вибір періоду">
+          <button type="button" data-days="1">1 день</button>
+          <button type="button" data-days="7">7 днів</button>
+          <button type="button" data-days="14">14 днів</button>
+          <button type="button" data-days="30">30 днів</button>
+        </div>
+        <label>З <input type="date" id="from" required></label>
+        <label>По <input type="date" id="to" required></label>
+        <button type="submit" id="apply" class="primary">Показати</button>
+      </form>
+      <div class="selected">Вибраний період: <b id="period-label">…</b><span class="updated" id="updated"></span></div>
+      <div class="loader" id="loader" role="status" aria-live="polite">
+        <span class="bubbles" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+        <span id="loader-text">Завантажую дані…</span>
+      </div>
+      <div class="facts" aria-label="Показники">
+        <div class="fact" data-kind="total"><span class="fact-label">Відпрацював</span><b class="fact-value" id="period-total">—</b></div>
+        <div class="fact" data-kind="starts"><span class="fact-label">Запусків</span><b class="fact-value" id="period-starts">—</b></div>
+      </div>
+    </section>
+
+    <p class="note" id="note" role="status" hidden></p>
+
+    <section class="period">
+      <h2>По днях</h2>
+      <ul class="days" id="days"></ul>
+    </section>
+
+    <section class="refuel-list" id="refuels-block" hidden>
+      <h2>Заправки в періоді</h2>
+      <ul id="refuels"></ul>
+    </section>
+
+    <p class="back"><button type="button" id="forget" class="linklike" hidden>Забути пароль на цьому пристрої</button></p>
+  </main>
+</body>
+</html>
