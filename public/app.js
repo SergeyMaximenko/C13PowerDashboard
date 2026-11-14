@@ -155,10 +155,10 @@ function render(data, example = false) {
     decimal.format(generatorWatts < 1000 ? generatorWatts : generatorWatts / 1000);
   $('generator-unit').textContent = Number.isFinite(generatorWatts) && generatorWatts < 1000 ? 'Вт' : 'кВт';
   $('generator-extra').textContent = Number.isFinite(data.generator?.voltageV) && data.generator.voltageV > 0 ? '· ' + Math.round(data.generator.voltageV) + ' В' : '';
-  $('generator-detail').hidden = generator === 'on'; // power and voltage are in the metric row
+  $('generator-detail').hidden = generator === 'on' || (generatorKnown && generator === 'off'); // power and voltage are in the metric row; a stopped generator needs no extra line
   $('generator-detail').textContent = generator === 'on' ? 'Напруга є'
     : generator === 'starting' ? 'Напруга є, інвертор його не використовує'
-    : generatorKnown ? 'Генератор в режимі очікування' : 'Немає актуальних показників';
+    : generatorKnown ? '' : 'Немає актуальних показників';
   displayedGenerator = !stale && generatorKnown && Number.isFinite(data.generator?.startedAt)
     ? { state: generator, startedAt: data.generator.startedAt, stoppedAt: data.generator.stoppedAt ?? null } : null;
   updateGeneratorTimes();
