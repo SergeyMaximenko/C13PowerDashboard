@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="uk" data-maintenance>
+<html lang="uk">
 <head>
   <meta charset="utf-8">
   <meta name="dashboard-api" content="https://c13-power.sergeymaximenko.workers.dev">
@@ -9,6 +9,10 @@
   <title>Чавдар 13 · Електроживлення</title>
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./styles.css">
+  <script>
+    // Technical works apply only to the public site: on this computer (Live Server, localhost) the page works as usual.
+    if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) document.documentElement.removeAttribute('data-maintenance');
+  </script>
   <script src="./app.js" defer></script>
   <script type="module" src="./generator.js"></script>
 </head>
@@ -62,7 +66,7 @@
     <div class="pane" data-pane="state">
       <section class="freshness" aria-label="Час даних">
         <div class="freshness-time"><svg><use href="#i-clock"/></svg><strong id="data-time">Очікуємо дані</strong><span id="data-elapsed" title="Час, що минув від вимірювання Deye" hidden></span></div>
-        <div class="freshness-note"><svg><use href="#i-cloud"/></svg><span class="note-text">Хмарні дані надходять із затримкою близько 5 хв</span><span class="loading-dots" aria-hidden="true"><i></i><i></i><i></i></span></div>
+        <div class="freshness-note"><svg><use href="#i-cloud"/></svg><span class="note-text">Хмарні дані надходять із затримкою близько 4 хв</span><span class="loading-dots" aria-hidden="true"><i></i><i></i><i></i></span></div>
       </section>
       <div class="notice" id="notice" role="status" hidden></div>
 
@@ -82,7 +86,7 @@
           <div class="card-bottom">
             <p class="event-time" id="grid-event" hidden></p>
             <span id="grid-duration" class="grid-duration" hidden></span>
-            <div class="load" id="grid-load" hidden><span class="secondary">Напруга</span><p><strong id="grid-voltage">—</strong><span>В</span><span class="extra">· на всіх фазах</span></p></div>
+            <div class="load" id="grid-load" hidden><span class="secondary">Напруга</span><p><strong id="grid-voltage">—</strong><span>В</span></p></div>
             <p class="secondary" id="grid-detail">Очікуємо показники</p>
           </div>
         </article>
@@ -174,11 +178,11 @@
             </svg>
           </div>
           <h2>Стан батареї</h2>
+          <p class="battery-mode" id="battery-mode">Очікуємо показники</p>
           <p class="main-value battery-value"><span id="soc-value">—</span><span class="percent" id="soc-percent" hidden>%</span></p>
           <div class="card-bottom">
             <progress id="battery-progress" max="100" value="0" aria-label="Стан батареї" hidden></progress>
-            <div class="load" id="battery-load" hidden><span class="secondary" id="battery-load-label"></span><p><strong id="battery-load-value">—</strong><span id="battery-load-unit">кВт</span></p></div>
-            <p class="battery-mode" id="battery-mode">Очікуємо показники</p>
+            <div class="load" id="battery-load" hidden><span class="secondary">Потужність</span><p><strong id="battery-load-value">—</strong><span id="battery-load-unit">кВт</span></p></div>
             <div class="battery-warning" id="battery-warning" role="alert" hidden>
               <strong>Зверніть увагу!</strong>
               <p>Будинок живиться від батареї.</p>
@@ -208,14 +212,6 @@
     <button type="button" class="install-help-button" id="open-install-help" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 5h4M11 19h2"/></svg><span>Як додати на робочий стіл iPhone</span></button>
     </div>
 
-    <section class="auth" id="auth" hidden>
-      <h2>Потрібен пароль</h2>
-      <form id="auth-form">
-        <input type="password" id="password" autocomplete="current-password" placeholder="Пароль" aria-label="Пароль" required>
-        <button type="submit" class="primary" id="auth-submit">Увійти</button>
-      </form>
-      <p class="auth-error" id="auth-error" role="alert"></p>
-    </section>
     <p class="report-note" id="report-note" role="status" hidden></p>
 
     <div class="pane" data-pane="fuel" hidden>
@@ -241,7 +237,6 @@
           <label>По <input type="date" id="to" required></label>
           <button type="submit" id="apply" class="primary">Показати</button>
         </form>
-        <div class="selected">Період: <b id="period-label">…</b><span class="updated" id="updated"></span></div>
         <div class="loader" id="loader" role="status" aria-live="polite">
           <span class="bubbles" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
           <span id="loader-text">Завантажую дані…</span>
@@ -254,7 +249,6 @@
       <ul class="days" id="days"></ul>
     </div>
 
-    <p class="report-foot"><button type="button" id="forget" class="linklike" hidden>Забути пароль на цьому пристрої</button></p>
 
   </main>
   <dialog id="install-help" aria-labelledby="install-help-title">

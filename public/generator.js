@@ -11,16 +11,12 @@ let run = 0;            // a newer request cancels the older one
 let tab = 'state';
 let loadedAt = 0;       // when the report was last loaded
 let loadedOnce = false;
-let authNeeded = false;
 
-// The password of the report is remembered in this browser (localStorage; if it is blocked, only until the page is closed).
-const PASSWORD_KEY = 'c13-report-password';
-class AuthError extends Error {}
-function readPassword() { try { return localStorage.getItem(PASSWORD_KEY) || ''; } catch { return ''; } }
-function savePassword(value) { try { localStorage.setItem(PASSWORD_KEY, value); } catch { /* kept in memory only */ } }
-function forgetPassword() { try { localStorage.removeItem(PASSWORD_KEY); } catch { /* nothing to remove */ } }
-let password = readPassword();
-
+// Ukrainian plural: 1 запуск, 2-4 запуски, 5+ і 11-14 запусків
+function startsWord(n) {
+  const m10 = n % 10, m100 = n % 100;
+  return m10 === 1 && m100 !== 11 ? 'запуск' : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? 'запуски' : 'запусків';
+}
 function apiBase() {
   const local = new URLSearchParams(location.search).get('api');
   // For testing: ?api=http://127.0.0.1:8787 (a Worker started on this computer). Only localhost is allowed.
@@ -64,7 +60,7 @@ function renderRow(row, maxMinutes, expand = false) {
   fill.style.width = Math.min(100, row.minutes / maxMinutes * 100) + '%';
   bar.append(fill);
   const total = el('div', 'day-total', row.minutes ? formatDuration(row.minutes) : '—');
-  const meta = el('div', 'day-meta', row.starts ? row.starts + ' ' + (row.starts === 1 ? 'запуск' : 'запусків') + ' · до ' + formatKw(row.peakW) : 'не працював');
+  const meta = el('div', 'day-meta', row.starts ? row.starts + ' ' + startsWord(row.starts) + ' · до ' + formatKw(row.peakW) : 'не працював');
   head.append(bar, total, meta);
   item.append(head);
   for (const refuel of row.refuels) item.append(refuelMark(refuel));
@@ -116,6 +112,23 @@ function markActivePreset(from, to) {
 // ---------- Fuel and service indicators ----------
 
 const INDICATOR_STALE_MIN = 30;
+let indicatorsAt = null;
+// "Пораховано …" line: under an hour the seconds tick live, later minutes/hours as before.
+function indicatorsAgeText(ms) {
+  const seconds = Math.max(0, Math.floor(ms / 1000));
+  if (seconds < 60) return seconds + ' с';
+  if (seconds < 3600) return Math.floor(seconds / 60) + ' хв ' + seconds % 60 + ' с';
+  return formatElapsed(seconds / 60);
+}
+function updateIndicatorsAge() {
+  const at = $('ind-at');
+  if (indicatorsAt === null || !at.textContent) return;
+  const ms = Date.now() - indicatorsAt;
+  const when = new Date(indicatorsAt).toLocaleString('uk-UA', { timeZone: 'Europe/Kyiv', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  at.textContent = 'Пораховано ' + when + ' · ' + indicatorsAgeText(ms) + ' тому';
+  at.dataset.kind = ms / 60000 > INDICATOR_STALE_MIN ? 'stale' : '';
+}
+setInterval(updateIndicatorsAge, 1000);
 // The sections come from the Worker already cleaned (b/i/u/blockquote and t.me links only), so innerHTML is safe here.
 function renderIndicators(indicators) {
   const list = $('ind-list');
@@ -123,14 +136,14 @@ function renderIndicators(indicators) {
   list.replaceChildren();
   at.textContent = '';
   at.dataset.kind = '';
+  indicatorsAt = null;
   if (!indicators) {
     list.append(el('p', 'ind-empty', 'Показники ще не надходили.'));
     return;
   }
-  const minutes = (Date.now() - indicators.at) / 60000;
-  const when = new Date(indicators.at).toLocaleString('uk-UA', { timeZone: 'Europe/Kyiv', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-  at.textContent = 'Пораховано ' + when + ' · ' + formatElapsed(minutes) + ' тому';
-  at.dataset.kind = minutes > INDICATOR_STALE_MIN ? 'stale' : '';
+  indicatorsAt = indicators.at;
+  at.textContent = ' ';
+  updateIndicatorsAge();
   for (const section of indicators.sections) {
     const box = el('section', 'ind');
     const title = el('h3', 'ind-title', section.title);
@@ -148,7 +161,6 @@ function render(data, from, to) {
   renderIndicators(data.indicators);
   $('period-total').textContent = formatDuration(data.totalMinutes);
   $('period-starts').textContent = String(data.totalStarts);
-  $('period-label').textContent = fullDate(from) + (from === to ? ', ' + weekday(from) : ' – ' + fullDate(to));
   const rows = buildRows(from, to, data);
   const maxMinutes = Math.max(60, ...rows.map(r => r.minutes));
   $('days').replaceChildren(...rows.map(row => renderRow(row, maxMinutes, rows.length === 1)));
@@ -156,27 +168,12 @@ function render(data, from, to) {
 
 async function fetchReport(base, from, to) {
   let response;
-  const headers = password ? { 'X-Report-Password': encodeURIComponent(password) } : {};
-  try { response = await fetch(base + '/api/generator-report?from=' + from + '&to=' + to, { cache: 'no-store', headers }); }
+  try { response = await fetch(base + '/api/generator-report?from=' + from + '&to=' + to, { cache: 'no-store' }); }
   catch { throw new Error('Немає зв’язку із сервером. Перевірте інтернет і спробуйте ще раз.'); }
   let data = null;
   try { data = await response.json(); } catch { /* handled below */ }
-  if (response.status === 401) throw new AuthError(data?.error || 'Потрібен пароль.');
   if (!response.ok || !data) throw new Error((data && data.error) || 'Сервер повернув помилку (HTTP ' + response.status + ').');
   return data;
-}
-
-function showAuth(message) {
-  authNeeded = true;
-  $('auth-error').textContent = message || '';
-  $('password').value = '';
-  applyTab();
-  $('password').focus();
-}
-function hideAuth() {
-  authNeeded = false;
-  $('auth-error').textContent = '';
-  applyTab();
 }
 
 async function load(from, to) {
@@ -185,7 +182,8 @@ async function load(from, to) {
   const base = apiBase();
   if (!base) { setNote('Не вказано адресу сервера.', 'error'); return; }
   $('apply').disabled = true;
-  $('period-label').textContent = fullDate(from) + (from === to ? ', ' + weekday(from) : ' – ' + fullDate(to));
+  loadedPeriod = from + '|' + to;
+  syncApply();
   markActivePreset(from, to);
   setLoader('Завантажую дані…');
   setNote('');
@@ -193,23 +191,12 @@ async function load(from, to) {
   try {
     const data = await fetchReport(base, from, to);
     if (mine !== run) return;
-    if (password) savePassword(password); // saved only after the server accepted it
-    hideAuth();
     render(data, from, to);
     loadedAt = Date.now();
     loadedOnce = true;
-    $('updated').textContent = 'Оновлено ' + new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
     $('analysis').dataset.state = 'ready';
   } catch (error) {
     if (mine !== run) return;
-    if (error instanceof AuthError) {
-      // A wrong remembered password is forgotten; the form asks for a new one.
-      const wrong = Boolean(password);
-      password = '';
-      forgetPassword();
-      showAuth(wrong ? error.message : '');
-      return;
-    }
     setNote(error.message, 'error');
     $('analysis').dataset.state = 'error';
     $('days').replaceChildren();
@@ -237,19 +224,21 @@ function preset(days) {
 }
 const reload = () => load($('from').value, $('to').value);
 
+// The "Показати" button is needed only when the dates were changed by hand: presets and the loaded period need no button.
+let loadedPeriod = '';
+function syncApply() { $('apply').hidden = $('from').value + '|' + $('to').value === loadedPeriod; }
+
 // ---------- Tabs ----------
 
 function tabFromHash() {
   const name = location.hash.slice(1);
   return TABS.includes(name) ? name : 'state';
 }
-// Shows the panes of the current tab; while the password is requested only the form is shown instead of the report.
+// Shows the panes of the current tab.
 function applyTab() {
   for (const button of document.querySelectorAll('[data-tab]')) button.setAttribute('aria-selected', String(button.dataset.tab === tab));
-  for (const pane of document.querySelectorAll('[data-pane]')) pane.hidden = pane.dataset.pane !== tab || (authNeeded && tab !== 'state');
-  $('auth').hidden = !(authNeeded && tab !== 'state');
+  for (const pane of document.querySelectorAll('[data-pane]')) pane.hidden = pane.dataset.pane !== tab;
   $('report-note').hidden = tab === 'state' || !$('report-note').dataset.has;
-  $('forget').hidden = !password || tab === 'state' || authNeeded;
 }
 function showTab(name, updateAddress = true) {
   tab = name;
@@ -258,7 +247,7 @@ function showTab(name, updateAddress = true) {
     try { history.replaceState(null, '', name === 'state' ? location.pathname + location.search : '#' + name); } catch { /* the address stays as it is */ }
   }
   // Data of the report are loaded when its tab is opened for the first time and again when they are older than a minute.
-  if (name !== 'state' && !authNeeded && (!loadedOnce || Date.now() - loadedAt > RELOAD_AFTER_MS)) reload();
+  if (name !== 'state' && (!loadedOnce || Date.now() - loadedAt > RELOAD_AFTER_MS)) reload();
 }
 
 function start() {
@@ -268,6 +257,7 @@ function start() {
   $('to').value = today;
   $('from').value = shiftDay(today, -(DEFAULT_DAYS - 1));
   $('days').replaceChildren(...skeletonRows(2));
+  $('apply').hidden = true;
 
   for (const button of document.querySelectorAll('[data-tab]')) button.addEventListener('click', () => showTab(button.dataset.tab));
   // The link on the generator card (#fuel) and the browser's back button change the address: follow it.
@@ -278,23 +268,11 @@ function start() {
     const period = readPeriod();
     if (period) load(period.from, period.to);
   });
+  $('from').addEventListener('input', syncApply);
+  $('to').addEventListener('input', syncApply);
   for (const button of document.querySelectorAll('[data-days]')) button.addEventListener('click', () => preset(Number(button.dataset.days)));
-  $('auth-form').addEventListener('submit', event => {
-    event.preventDefault();
-    const typed = $('password').value;
-    if (!typed) return;
-    password = typed;
-    $('auth-error').textContent = '';
-    reload();
-  });
-  $('forget').addEventListener('click', () => {
-    if (!confirm('Ви впевнені, що хочете забути пароль на цьому пристрої?\nДля наступного входу його потрібно буде ввести знову.')) return;
-    password = '';
-    forgetPassword();
-    showAuth('');
-  });
   // The refresh button of the page header reloads the report when one of its tabs is open (the state is refreshed by app.js).
-  $('refresh').addEventListener('click', () => { if (tab !== 'state' && !authNeeded) reload(); });
+  $('refresh').addEventListener('click', () => { if (tab !== 'state') reload(); });
 
   showTab(tabFromHash(), false);
 }

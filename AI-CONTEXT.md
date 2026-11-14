@@ -15,7 +15,7 @@ npm test              # усі тести (Node >= 22)
 npm run build         # dist/ для GitHub Pages
 npx wrangler dev      # локальний Worker (.dev.vars)
 npx wrangler deploy   # опублікувати Worker
-npx wrangler secret put INGEST_SECRET   # також REPORT_PASSWORD
+npx wrangler secret put INGEST_SECRET
 ```
 
 Послідовність: правка → `npm test` → (якщо чіпали `worker/`, `lib/`, `wrangler.toml`) `wrangler deploy` → commit + push.
@@ -24,7 +24,6 @@ npx wrangler secret put INGEST_SECRET   # також REPORT_PASSWORD
 
 - `lib/indicators.mjs` — очищення HTML показників генератора (текст з нотатки «Показники», C# передає його у знімку) і розбиття на секції для сторінки звіту.
 - `lib/ingest.mjs` — очищення (allowlist) даних від C#, знімок → статус дашборда. `lib/journal-sessions.mjs` — сеанси генератора з журналу. `lib/domain.mjs` — правила станів (дублюються в C# `PowerCalc`). `lib/public-status.mjs` — allowlist відповіді `/api/status`.
-- Звіт генератора за паролем (`REPORT_PASSWORD`, заголовок `X-Report-Password`); `/api/status` відкритий. Імена людей і ніки лише за паролем.
 - Синхронізація за хешем: знімок щоразу, журнал/заправки повністю лише коли хеш Worker відрізняється від хешу C#.
 
 ## Правила змін
@@ -34,6 +33,8 @@ npx wrangler secret put INGEST_SECRET   # також REPORT_PASSWORD
 3. Тести завантажують шматки `public/app.js` за маркерами функцій (`function inverterState(`, `function measurementDateLabel(`, `function render(`, `async function api(`, `async function refresh(`) у `vm`: не ламати маркери.
 4. SVG: `hidden` перемикати через `setHidden`; Safari погано переносить `var()` у `@keyframes`.
 5. Перед завершенням — `npm test`.
+6. Сервісний режим («технічні роботи») вмикається змінною репозиторію `REGIM_SERVICE` = `+` (потім Run workflow у Publish dashboard); локально не діє: `TECHNICAL.md`, розділ 12.
+7. Помилки запису KV: `KV_LIMIT` / `KV_WRITE_FAILED` (503), C# шле про це повідомлення в Telegram раз на добу: `TECHNICAL.md`, розділ 6.2.
 
 ## Відкрито
 

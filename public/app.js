@@ -80,8 +80,8 @@ function updateGeneratorTimes() {
   if (!run) { box.textContent = badge.textContent = ''; return; }
   const now = Date.now();
   const stamp = value => (date.format(value) !== date.format(now) ? date.format(value) + ', ' : '') + clock.format(value);
-  // Hours and minutes, no seconds.
-  const age = value => measurementAge(value, now).replace(/^Пройшло /, '').replace(/ \d+ с\.$/, '');
+  // Same live counter as the mains badge: hours, minutes and seconds.
+  const age = value => measurementAge(value, now).replace(/^Пройшло /, '');
   if (run.state === 'off' && !run.stoppedAt) { box.hidden = badge.hidden = true; return; }
   const stopped = run.state === 'off';
   box.textContent = stopped ? 'Зупинено ≈ ' + stamp(run.stoppedAt) : 'Запустився ≈ ' + stamp(run.startedAt);
@@ -120,8 +120,8 @@ function render(data, example = false) {
   setHidden($('grid-icon'), grid === 'on');
   setHidden($('grid-anim'), grid !== 'on');
   $('grid-value').textContent = ({ on: 'Є', off: 'Немає', unstable: 'Нестабільна', unknown: 'Невідомо' })[grid] || 'Невідомо';
-  $('grid-detail').textContent = grid === 'on' ? 'Напруга є на всіх фазах' :
-    grid === 'off' ? (data.allPhasesZero ? 'Усі фази: 0 В' : 'Немає вхідної напруги') :
+  $('grid-detail').textContent = grid === 'on' ? 'Напруга є' :
+    grid === 'off' ? 'Немає вхідної напруги' :
     grid === 'unstable' ? 'Перевірте стан фаз' : 'Немає актуальних показників';
   const voltage = data.gridVoltage;
   $('grid-load').hidden = !(grid === 'on' && Number.isFinite(voltage) && voltage > 0);
@@ -146,7 +146,7 @@ function render(data, example = false) {
   $('generator-card').hidden = !$('generator-card').dataset.seen && !stale;
   // "starting": the generator runs (voltage is present) but the inverter has not taken it yet, the battery still feeds the house.
   $('generator-card').dataset.state = generator === 'on' ? 'on' : generator === 'starting' ? 'unstable' : generatorKnown ? 'standby' : 'unknown';
-  $('generator-value').textContent = generator === 'on' ? 'Працює' : generator === 'starting' ? 'Готується до роботи' : generatorKnown ? 'Зупинений' : 'Невідомо';
+  $('generator-value').textContent = generator === 'on' ? 'Працює' : generator === 'starting' ? 'Працює без навантаження' : generatorKnown ? 'Зупинений' : 'Невідомо';
   setHidden($('generator-icon'), generator === 'on' || generator === 'starting');
   setHidden($('generator-anim'), generator !== 'on' && generator !== 'starting');
   $('generator-load').hidden = generator !== 'on';
@@ -157,7 +157,7 @@ function render(data, example = false) {
   $('generator-extra').textContent = Number.isFinite(data.generator?.voltageV) && data.generator.voltageV > 0 ? '· ' + Math.round(data.generator.voltageV) + ' В' : '';
   $('generator-detail').hidden = generator === 'on'; // power and voltage are in the metric row
   $('generator-detail').textContent = generator === 'on' ? 'Напруга є'
-    : generator === 'starting' ? 'Генератор запущено, чекаємо підключення'
+    : generator === 'starting' ? 'Напруга є, інвертор його не використовує'
     : generatorKnown ? 'Генератор в режимі очікування' : 'Немає актуальних показників';
   displayedGenerator = !stale && generatorKnown && Number.isFinite(data.generator?.startedAt)
     ? { state: generator, startedAt: data.generator.startedAt, stoppedAt: data.generator.stoppedAt ?? null } : null;
@@ -203,15 +203,11 @@ function render(data, example = false) {
   $('battery-mascot').dataset.dir = discharging ? 'down' : 'up';
   // Power is shown next to the mode only while the battery really charges or discharges.
   const batteryWatts = Number.isFinite(data.batteryWatts) && (data.batteryMode === 'charging' || data.batteryMode === 'discharging') ? Math.abs(data.batteryWatts) : null;
-  const batteryPower = batteryWatts === null ? '' :
-    ' · ' + decimal.format(batteryWatts < 1000 ? batteryWatts : batteryWatts / 1000) + (batteryWatts < 1000 ? ' Вт' : ' кВт');
   const idleText = soc != null && soc >= 99 ? 'Повністю заряджена' : 'У режимі очікування';
   const modeText = (({ discharging: 'Розряджається', charging: 'Заряджається', idle: idleText, unknown: 'Стан заряду невідомий' })[data.batteryMode] || 'Стан заряду невідомий');
-  $('battery-mode').textContent = stale ? 'Немає актуальних показників' : modeText + batteryPower;
+  $('battery-mode').textContent = stale ? 'Немає актуальних показників' : modeText;
   // With a real power the mode becomes the label of the same "metric row" the other cards use.
   $('battery-load').hidden = stale || batteryWatts === null;
-  $('battery-mode').hidden = !$('battery-load').hidden;
-  $('battery-load-label').textContent = modeText;
   $('battery-load-value').textContent = batteryWatts === null ? '—' : decimal.format(batteryWatts < 1000 ? batteryWatts : batteryWatts / 1000);
   $('battery-load-unit').textContent = batteryWatts !== null && batteryWatts < 1000 ? 'Вт' : 'кВт';
   // Warning for residents: the battery feeds the house and will switch off at 15%.

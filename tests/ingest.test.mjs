@@ -121,3 +121,16 @@ test('generator report from the pushed journal and refuels', async () => {
   const early =await (await handle(new Request('https://x/api/generator-report?from=2026-11-01&to=2026-11-13'), e)).json();
   assert.ok(early.missingDays.every(m => Array.isArray(m.refuels)));
 });
+
+test('ingest: KV write limit gives a clear KV_LIMIT error (503), other write errors KV_WRITE_FAILED', async () => {
+  const handle = createHandler({ now: () => NOW });
+  const failing = message => ({ DATA: { async get() { return null; }, async put() { throw new Error(message); } }, INGEST_SECRET: 's3cret' });
+  let res = await handle(post('/api/ingest', { schemaVersion: 1, snapshot }), failing('KV PUT failed: 429 Too Many Requests'));
+  assert.equal(res.status, 503);
+  assert.equal((await res.json()).error, 'KV_LIMIT');
+  res = await handle(post('/api/ingest', { schemaVersion: 1, snapshot }), failing('KV put() limit exceeded for the day.'));
+  assert.equal((await res.json()).error, 'KV_LIMIT');
+  res = await handle(post('/api/ingest/journal', { schemaVersion: 1, hash: 'h1', rows: [] }), failing('something else'));
+  assert.equal(res.status, 503);
+  assert.equal((await res.json()).error, 'KV_WRITE_FAILED');
+});

@@ -8,11 +8,10 @@ preview_urls = false   # не створювати зайві публічні �
 # Worker нічого не бере з Deye: усі дані надсилає C#-застосунок (ScheduleDisconnectLight), див. INGEST.md.
 # Секрети (задаються окремо, не в цьому файлі):
 #   npx wrangler secret put INGEST_SECRET     - спільний секрет з C# (X-Ingest-Secret)
-#   npx wrangler secret put REPORT_PASSWORD   - пароль звіту про генератор (необов'язково)
 # [vars]
 # ALLOWED_ORIGIN = "https://sergeymaximenko.github.io"   # коли буде адреса сторінки
 
 # Сховище даних (KV namespace "C13PowerDashboard"): знімок стану, журнал, заправки.
 [[kv_namespaces]]
 binding = "DATA"     # у коді env.DATA
-id = "c74fddef74834634b3c8e253e9227ab9"
+id = "09ded688834648879cdc6620fde48db8"

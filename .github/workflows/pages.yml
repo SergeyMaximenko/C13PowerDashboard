@@ -29,6 +29,14 @@ jobs:
       - run: npm test
       - name: Prepare page
         run: npm run build
+      # Сервісний режим («технічні роботи»): змінна репозиторію REGIM_SERVICE зі значенням «+».
+      # Settings -> Secrets and variables -> Actions -> Variables. Будь-яке інше значення (або змінної немає) = звичайна робота.
+      # Після зміни значення запустити цей workflow вручну (Run workflow).
+      - name: Service mode (technical works)
+        if: vars.REGIM_SERVICE == '+'
+        run: |
+          sed -i 's/<html lang="uk">/<html lang="uk" data-maintenance>/' dist/index.html
+          grep -q 'data-maintenance' dist/index.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:

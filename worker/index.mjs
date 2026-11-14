@@ -25,7 +25,7 @@ export function createHandler({ now = Date.now } = {}) {
       'Cache-Control': 'no-store',
       'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN || '*',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'X-Report-Password, X-Ingest-Secret, Content-Type',
+      'Access-Control-Allow-Headers': 'X-Ingest-Secret, Content-Type',
       'Access-Control-Max-Age': '86400',
       'Vary': 'Origin',
       'X-Content-Type-Options': 'nosniff',
@@ -47,6 +47,11 @@ export function createHandler({ now = Date.now } = {}) {
 
   // ---- Ingest: data pushed by the C# application (contract: INGEST.md) ----
   const ingestFailures = new Map();
+  // KV write failed. Free plan allows 1000 writes a day: then the error is KV_LIMIT (the C# app reads it and alerts in Telegram).
+  function kvWriteFailed(env, error) {
+    const limit = /limit|429|too many/i.test(String(error?.message ?? error));
+    return send(env, 503, { error: limit ? 'KV_LIMIT' : 'KV_WRITE_FAILED' });
+  }
   async function ingest(request, env, url) {
     if (!env.DATA) return send(env, 500, { error: 'KV не налаштований.' });
     const expected = String(env.INGEST_SECRET ?? '');
@@ -73,7 +78,10 @@ export function createHandler({ now = Date.now } = {}) {
       // Indicators (generator text) travel inside the snapshot and are saved in the same KV key (one write per run).
       // If this run sent none, the previous ones are kept.
       snapshot.indicators = parseIndicators(body.snapshot?.indicatorsHtml, body.snapshot?.indicatorsAt) ?? old?.indicators ?? null;
-      if (shouldWriteSnapshot(previous, snapshot, now())) await env.DATA.put(KV_SNAPSHOT, JSON.stringify({ snapshot, receivedAt: now() }));
+      if (shouldWriteSnapshot(previous, snapshot, now())) {
+        try { await env.DATA.put(KV_SNAPSHOT, JSON.stringify({ snapshot, receivedAt: now() })); }
+        catch (error) { return kvWriteFailed(env, error); }
+      }
       const [journal, refuels] = await Promise.all([env.DATA.get(KV_JOURNAL, 'json'), env.DATA.get(KV_REFUELS, 'json')]);
       return send(env, 200, {
         ok: true,
@@ -85,7 +93,8 @@ export function createHandler({ now = Date.now } = {}) {
     const rows = isJournal ? cleanJournal(body.rows) : cleanRefuels(body.rows);
     const hash = cleanHash(body.hash);
     if (!rows || !hash) return send(env, 400, { error: 'Некоректні рядки або hash.' });
-    await env.DATA.put(isJournal ? KV_JOURNAL : KV_REFUELS, JSON.stringify({ hash, rows, receivedAt: now() }));
+    try { await env.DATA.put(isJournal ? KV_JOURNAL : KV_REFUELS, JSON.stringify({ hash, rows, receivedAt: now() })); }
+    catch (error) { return kvWriteFailed(env, error); }
     return send(env, 200, { ok: true, count: rows.length });
   }
 
@@ -129,31 +138,6 @@ export function createHandler({ now = Date.now } = {}) {
     });
   }
 
-  // The generator report (names of the people who refuelled) is protected by the password REPORT_PASSWORD (a Cloudflare secret).
-  // The page sends it in X-Report-Password (URL-encoded) and remembers it in the browser. Without the secret the report stays open.
-  // Wrong attempts are limited per address (while the isolate lives): 10 in 10 minutes, then 429.
-  const failures = new Map();
-  function checkPassword(request, env) {
-    const expected = String(env.REPORT_PASSWORD ?? '');
-    if (!expected) return null;
-    const who = request.headers.get('CF-Connecting-IP') || 'unknown';
-    const record = failures.get(who);
-    if (record && now() - record.since > 600000) failures.delete(who);
-    if ((failures.get(who)?.count ?? 0) >= 10)
-      return send(env, 429, { error: 'Забагато спроб. Спробуйте за кілька хвилин.', auth: 'blocked' });
-    const header = request.headers.get('X-Report-Password');
-    let given = '';
-    try { given = decodeURIComponent(header ?? ''); } catch { given = ''; }
-    if (header !== null && sameSecret(given, expected)) { failures.delete(who); return null; }
-    if (header !== null) {
-      const current = failures.get(who) ?? { count: 0, since: now() };
-      current.count++;
-      failures.set(who, current);
-      if (failures.size > 500) failures.delete(failures.keys().next().value);
-    }
-    return send(env, 401, { error: header === null ? 'Потрібен пароль.' : 'Невірний пароль.', auth: 'required' });
-  }
-
   return async function handle(request, env) {
     const url = new URL(request.url);
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: headers(env) });
@@ -177,8 +161,6 @@ export function createHandler({ now = Date.now } = {}) {
       data.generator.stoppedAt = last?.end ?? null;
       return send(env, 200, publicStatus(data));
     }
-    const denied = checkPassword(request, env);
-    if (denied) return denied;
     return report(env, url);
   };
 }

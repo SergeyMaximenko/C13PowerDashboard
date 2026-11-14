@@ -22,8 +22,8 @@ Deye Cloud → ScheduleDisconnectLight (C#, GitHub Actions ~кожні 2 хв)
 | Шлях | Призначення |
 |---|---|
 | `public/index.html`, `app.js`, `styles.css` | Одна сторінка: розмітка, SVG-іконки, закладки, картки «Стан», логіка, анімації, стилі всіх закладок. `<meta name="dashboard-api">` — адреса Worker. |
-| `public/generator.js`, `generator-lib.js` | Закладки «Паливо та ТО» та «Генератор»: ледаче завантаження звіту, періоди 1/7/14/30 днів, пароль, секції показників. `generator-lib.js` — чисті функції. Окремої сторінки немає. |
-| `worker/index.mjs` | Маршрути, ingest, звіт генератора, CORS, пароль звіту. |
+| `public/generator.js`, `generator-lib.js` | Закладки «Паливо та ТО» та «Генератор»: ледаче завантаження звіту, періоди 1/7/14/30 днів, секції показників. `generator-lib.js` — чисті функції. Окремої сторінки немає. |
+| `worker/index.mjs` | Маршрути, ingest, звіт генератора, CORS. |
 | `lib/ingest.mjs` | Очищення (allowlist) даних від C#, знімок → статус дашборда. |
 | `lib/journal-sessions.mjs` | Сеанси генератора з журналу, підсумок дня. |
 | `lib/indicators.mjs` | Очищення HTML показників генератора (allowlist тегів і посилань t.me) і розбиття на секції. |
@@ -46,7 +46,7 @@ Deye Cloud → ScheduleDisconnectLight (C#, GitHub Actions ~кожні 2 хв)
 | Локальний Worker | `npx wrangler dev` (`http://127.0.0.1:8787/api/status`) |
 | Публікація Worker | `npx wrangler deploy` |
 | Історія версій | `npx wrangler deployments list` |
-| Секрет | `npx wrangler secret put INGEST_SECRET` (також `REPORT_PASSWORD`) |
+| Секрет | `npx wrangler secret put INGEST_SECRET` |
 | Список секретів | `npx wrangler secret list` |
 
 Послідовність змін: правка → `npm test` → якщо чіпали `worker/`, `lib/` або `wrangler.toml`, то `npx wrangler deploy` (push Worker не оновлює) → commit + push (Actions публікує сторінку за 1–2 хв) → Ctrl+F5; на iPhone нова вкладка. Правки лише в `public/` не потребують `wrangler deploy`.
@@ -55,7 +55,7 @@ Deye Cloud → ScheduleDisconnectLight (C#, GitHub Actions ~кожні 2 хв)
 
 - Сторінка: VS Code → `public/index.html` → Live Server. `?api=http://127.0.0.1:8787` бере дані з локального Worker (дозволені лише `localhost`/`127.0.0.1`).
 - Внизу сторінки перемикач «Перегляд» з прикладами (мережі немає, режим очікування, дані застаріли, завантаження тощо).
-- Локальні секрети: `.dev.vars` (шаблон `.dev.vars.example`): `INGEST_SECRET`, `REPORT_PASSWORD`. Без `INGEST_SECRET` ingest повертає 500.
+- Локальні секрети: `.dev.vars` (шаблон `.dev.vars.example`): `INGEST_SECRET`. Без `INGEST_SECRET` ingest повертає 500.
 - `wrangler dev` використовує локальне KV; щоб побачити дані, надішліть знімок через `POST /api/ingest` (див. `INGEST.md`) або запустіть C# з `WORKER_URL=http://127.0.0.1:8787`.
 
 ## 5. Секрети й конфігурація
@@ -64,7 +64,6 @@ Deye Cloud → ScheduleDisconnectLight (C#, GitHub Actions ~кожні 2 хв)
 |---|---|
 | `INGEST_SECRET` | Cloudflare Worker secret; той самий у C# (`appsettings.Local.json` локально, GitHub Secret `INGEST_SECRET`). |
 | `WORKER_URL` | C#: `appsettings.Local.json` / GitHub Secret `WORKER_URL`. |
-| `REPORT_PASSWORD` | Cloudflare Worker secret (пароль звіту генератора, необов'язковий). |
 | `ALLOWED_ORIGIN` | `wrangler.toml` `[vars]` (закоментовано): якщо задати, CORS обмежується цією адресою; зараз `*`. |
 | KV `DATA` | `wrangler.toml` `[[kv_namespaces]]`, namespace `C13PowerDashboard`. |
 
@@ -82,7 +81,7 @@ Deye Cloud → ScheduleDisconnectLight (C#, GitHub Actions ~кожні 2 хв)
 | `POST /api/ingest/refuels` | повні заправки `{ schemaVersion, hash, rows }` |
 | `GET /api/status` | стан дашборда зі знімка; 503, якщо даних ще не було |
 | `GET /api/generator-report`, `GET /api/generator` | звіт генератора (однакова відповідь), `?from=&to=`, ≤ 31 дня, `to` не в майбутньому; за паролем |
-| `OPTIONS` | `204` з CORS (`GET, POST, OPTIONS`; заголовки `X-Report-Password`, `X-Ingest-Secret`, `Content-Type`) |
+| `OPTIONS` | `204` з CORS (`GET, POST, OPTIONS`; заголовки `X-Ingest-Secret`, `Content-Type`) |
 
 Відповіді: `Cache-Control: no-store`, `X-Content-Type-Options: nosniff`.
 
@@ -93,6 +92,7 @@ Deye Cloud → ScheduleDisconnectLight (C#, GitHub Actions ~кожні 2 хв)
 - Показники генератора (`indicatorsHtml` + `indicatorsAt`) їдуть усередині знімка й зберігаються в тому ж ключі `ingest:snapshot` як `snapshot.indicators = { at, sections[{title,html}] }`: один запис KV на запуск. Якщо запуск показників не надіслав, лишаються попередні. HTML очищається на Worker (`lib/indicators.mjs`), сторінка вставляє його через `innerHTML`.
 - Знімок пишеться за правилом `shouldWriteSnapshot` (`lib/ingest.mjs`): (1) у KV ще нічого немає або запис непридатний; (2) змінився один зі статусів (`gridStatus`, `genStatus`, `inverterStatus`) — пишемо одразу; (3) змінився `measuredAt`, і від попереднього запису минуло щонайменше `SNAPSHOT_MIN_GAP_MS` = 110 с. Інакше запису немає. Причина: KV на безкоштовному плані дозволяє 1000 записів/добу; найгірший випадок 86400/110 = 785 записів знімка на добу незалежно від частоти запусків C#. Поріг трохи менший за 2 хв навмисно: запуски йдуть приблизно раз на 2 хв із розкидом, і рівно 2 хв пропускали б кожен другий запуск. Час у майбутньому або зламаний `receivedAt` запис не блокує. Побічний ефект: решта полів (заряд, потужності, показники) відстає до ~2 хв, але статуси — ні.
 - Журнал і заправки C# надсилає повністю лише коли хеш Worker відрізняється від його хешу (`needJournal`/`needRefuels`). Ручні правки таблиці потрапляють на Worker самі. Хеш Worker зберігає такий, як надіслав клієнт.
+- Помилка запису в KV: `put` обгорнуто в `try/catch` (`kvWriteFailed`). Вичерпаний ліміт записів дає `503 {"error":"KV_LIMIT"}`, будь-яка інша помилка запису — `503 {"error":"KV_WRITE_FAILED"}`. C# (`WorkerSync`) кидає `Worker 503: {...}`; на `KV_LIMIT` `Program.NotifyKvLimit()` раз на добу шле яскраве повідомлення в тестову групу Telegram (дата останнього повідомлення — `KvLimitAlertDate` в `appState.json`). Кількість записів за добу Worker не бачить: дивитися в Cloudflare Dashboard → Workers & Pages → KV → `C13PowerDashboard` → Metrics (ліміт скидається о 00:00 UTC).
 - Між запитами в Worker зберігаються лише прості дані (лічильники спроб). Ніколи не зберігати `Promise` іншого запиту.
 
 ### 6.3. `/api/status`
@@ -106,8 +106,7 @@ Deye Cloud → ScheduleDisconnectLight (C#, GitHub Actions ~кожні 2 хв)
 - Потужність: `peakW` береться з рядка зупинки (колонка G журналу), для сеансу, що триває, — зі знімка (`genPeak`).
 - Заправки: блок `ingest:refuels` (рядки `{ at, liters, by }`; тестові й «Не враховувати» C# не передає) показуються мітками в день заправки. Підсумки «після останньої заправки», паливо й ТО Worker не рахує: це робить C# і передає готовим текстом показників.
 - Відповідь: `{ from, to, timezone, totalMinutes, totalStarts, days[{date,minutes,starts,peakW,refuels}], sessions[{start,end,minutes,peakW,open,startLocal,endLocal}], indicators, refuels, refuelsConfigured, refuelsError, missingDays }`.
-- Закладки сторінки: «Стан» (завантажується одразу через `/api/status`), «Паливо та ТО» (секції показників, час «Пораховано … N хв тому», жовтий, якщо старіше 30 хв; «Запланові відключення» згорнуті) і «Генератор» (кнопки 1/7/14/30 днів, поля «З/По», підсумок, дні з сеансами й мітками заправок; при одному дні сеанси розгорнуті). Обидві закладки живляться одним запитом `/api/generator-report`, який робиться при першому відкритті закладки й повторюється, якщо дані старші за хвилину; кнопка «Оновити» оновлює відкриту закладку. Закладка запам'ятовується в адресі (`#fuel`, `#generator`). Стилі всіх закладок — у `styles.css`.
-- Пароль: секрет `REPORT_PASSWORD`; сторінка надсилає його в `X-Report-Password` (URL-кодований), запам'ятовує в `localStorage` після успіху, забуває при 401. Без секрету звіт відкритий. 10 невдалих спроб за 10 хв з адреси → 429. `/api/status` пароля не вимагає. Імена тих, хто заправляв, віддаються лише за паролем.
+- Закладки сторінки: «Стан» (завантажується одразу через `/api/status`), «Паливо та ТО» (секції показників, час «Пораховано … N хв тому», жовтий, якщо старіше 30 хв; «Запланові відключення» згорнуті) і «Генератор» (кнопки 1/7/14/30 днів, поля «З/По», підсумок, дні з сеансами й мітками заправок; при одному дні сеанси розгорнуті). Обидві закладки живляться одним запитом `/api/generator-report`, який робиться при першому відкритті закладки й повторюється, якщо дані старші за хвилину; кнопка «Оновити» оновлює відкриту закладку. Рядок «Пораховано …» оновлюється щосекунди: до години з секундами («3 хв 12 с тому»), далі «1 год», «2 дні». Рядка «Період: …» і часу «Оновлено» немає: дати видно в полях «З/По». Кнопка «Показати» схована, поки період збігається з уже показаним (кнопки 1/7/14/30 днів вантажать самі); вона з'являється, лише коли дату в «З» або «По» змінили вручну. Закладка запам'ятовується в адресі (`#fuel`, `#generator`). Стилі всіх закладок — у `styles.css`.
 
 ### 6.5. Обмеження Cloudflare (безкоштовний план)
 
@@ -133,7 +132,7 @@ Deye Cloud → ScheduleDisconnectLight (C#, GitHub Actions ~кожні 2 хв)
 
 ### 7.4. Генератор (вхід GEN інвертора)
 
-Працює: напруга GEN ≥ 150 В або потужність ≥ 800 Вт. Якщо напруга є, потужність < 800 Вт, а батарея ще розряджається — `starting` («Готується до роботи»: двигун працює, інвертор ще не взяв генератор). `off` — значення є, але напруги й потужності немає; `unknown` — параметрів немає або дані застаріли. Знімок передає `genStatus` (1/0), `genPower`, `genVoltage`, `genPeak`; стан `starting` на сторінці виводиться з `genStatus` і режиму батареї. Журнал змін генератора (запуск/зупинка) веде C#.
+Працює: напруга GEN ≥ 150 В або потужність ≥ 800 Вт. Якщо напруга є, потужність < 800 Вт, а батарея ще розряджається — `starting` («Працює без навантаження»: двигун працює, інвертор ще не взяв генератор або вже відключив). `off` — значення є, але напруги й потужності немає; `unknown` — параметрів немає або дані застаріли. Знімок передає `genStatus` (1/0), `genPower`, `genVoltage`, `genPeak`; стан `starting` на сторінці виводиться з `genStatus` і режиму батареї. Журнал змін генератора (запуск/зупинка) веде C#.
 
 ### 7.5. Час «з'явилася / зникла»
 
@@ -162,21 +161,28 @@ Deye Cloud → ScheduleDisconnectLight (C#, GitHub Actions ~кожні 2 хв)
 
 Тести завантажують шматки `public/app.js` за маркерами (`function inverterState(` … `function measurementDateLabel(`; `function render(` … `async function api(`; `async function refresh(`) у `vm` з примітивним DOM (без `style`, `classList`, `toggleAttribute`). Не переставляти маркери; нові допоміжні функції для `render` класти між `render` і `async function api(`; до `style` звертатися як `style?.setProperty`.
 
+### 8.5. Тексти станів і живі лічильники
+
+- Картка генератора: `on` — «Працює»; `starting` — «Працює без навантаження» (на вході GEN є напруга, але інвертор генератор не бере: і під час запуску, і під час зупинки; підпис «Напруга є, інвертор його не використовує»); `off` — «Зупинений». Бейдж «Працює ≈ …» / «Відпочиває ≈ …» — живий лічильник з годинами, хвилинами й секундами (`updateGeneratorTimes`, щосекунди), як «Є вже ≈ …» у мережі.
+- Картка батареї: режим («Заряджається» / «Розряджається» / «У режимі очікування» / «Повністю заряджена») стоїть над відсотком, жирно; потужність — у рядку з підписом «Потужність». Правило C# і Worker однакове: при мережі розряд менший за 150 Вт (`MAINS_IDLE_LIMIT`) вважається «очікуванням».
+- Картка мережі: «Є» + напруга, без приписки про фази; при `off` підпис «Немає вхідної напруги».
+- Підпис «Хмарні дані надходять із затримкою близько 4 хв» — статичний текст у `index.html` (`.freshness-note`).
+- Відмінювання «запуск/запуски/запусків» — `startsWord()` у `public/generator.js`.
+
 ## 9. Тести (`tests/`)
 
 | Файл | Що перевіряє |
 |---|---|
 | `indicators.test.mjs` | Очищення HTML (allowlist, посилання t.me, екранування), секції, показники в знімку, не віддаються в `/api/status`. |
-| `ingest.test.mjs` | Секрет, `schemaVersion`, хеші (`needJournal`/`needRefuels`), запис у KV лише при зміні, `/api/status`, звіт генератора (сеанси, північ, тестовий рядок, потужність, мітки заправок). |
+| `ingest.test.mjs` | Секрет, `schemaVersion`, хеші (`needJournal`/`needRefuels`), запис у KV лише при зміні, помилки запису (`KV_LIMIT`, `KV_WRITE_FAILED`), `/api/status`, звіт генератора (сеанси, північ, тестовий рядок, потужність, мітки заправок). |
 | `worker.test.mjs` | Статус зі знімка, `stale`, 503 без даних, методи, CORS. |
-| `auth.test.mjs` | Пароль звіту: 401/429, кодування, відкритий режим, відсутність пароля у відповідях. |
 | `domain.test.mjs`, `operation.test.mjs`, `age.test.mjs` | Стани мережі/батареї/інвертора, часові пояси, підписи віку. |
 | `generator.test.mjs`, `refuels.test.mjs` | Склейка й обрізання сеансів, розбір CSV та час заправки. |
 | `generator-page.test.mjs`, `pages.test.mjs` | Сторінка звіту, збірка `dist/`, адреса Worker, `?api` лише для localhost. |
 
 ## 10. Публікація сторінки
 
-`.github/workflows/pages.yml`: `push` у `main` і ручний запуск → checkout → Node 22 → `npm test` → `npm run build` → upload `dist` → deploy-pages. Секрети не потрібні. Якщо тести падають, публікації немає. `?v=<hash>` у посиланнях змушує браузери підтягнути нову версію.
+`.github/workflows/pages.yml`: `push` у `main` і ручний запуск → checkout → Node 22 → `npm test` → `npm run build` → (якщо `REGIM_SERVICE` = `+`) вставити `data-maintenance` у `dist/index.html` → upload `dist` → deploy-pages. Секрети не потрібні. Якщо тести падають, публікації немає. `?v=<hash>` у посиланнях змушує браузери підтягнути нову версію.
 
 ## 11. Типові проблеми
 
@@ -192,3 +198,28 @@ Deye Cloud → ScheduleDisconnectLight (C#, GitHub Actions ~кожні 2 хв)
 | Worker поводиться по-старому | Забули `npx wrangler deploy`. |
 | Сеанс 0 хв у звіті | У журналі час зупинки майже збігається із запуском: виправити дату рядка. |
 | Анімація зависає на iPhone | Розділ 8.3. |
+| Сайт показує «технічні роботи» | Змінна `REGIM_SERVICE` = `+`: змінити значення й перезапустити Publish dashboard (розділ 12). |
+| У лозі C# `Worker 503: KV_LIMIT` | Вичерпано 1000 записів KV на добу; сайт показує старі дані до 00:00 UTC (розділ 6.2). |
+
+## 12. Сервісний режим («технічні роботи»)
+
+Замінює всю сторінку повідомленням про технічні роботи, не звертаючись до сервера. Корисно, коли йде міграція Worker/KV або потрібно закрити сторінку від мешканців.
+
+**Перемикач — змінна репозиторію `REGIM_SERVICE`** (GitHub → Settings → Secrets and variables → Actions → Variables):
+
+- значення `+` — сервісний режим;
+- будь-яке інше значення (`0`, порожньо) або відсутність змінної — звичайна робота.
+
+**Як змінити:** змінити значення змінної (олівець), потім Actions → Publish dashboard → **Run workflow** (сайт оновиться приблизно за хвилину). Змінна сама нічого не публікує. Комітити нічого не треба.
+
+**Як працює:**
+
+| Де | Що |
+|---|---|
+| `.github/workflows/pages.yml`, крок «Service mode» | Якщо `vars.REGIM_SERVICE == '+'`, після `npm run build` додає атрибут `data-maintenance` у `<html lang="uk">` файлу `dist/index.html` (і падає, якщо підставити не вдалося). У `public/index.html` атрибута **немає**. |
+| `index.html`, `<section class="maintenance">` | Текст повідомлення (змінюється вільно). |
+| `index.html`, скрипт на початку | На `localhost` / `127.0.0.1` / `[::1]` атрибут знімається, тож локально сторінка завжди працює як звичайно. |
+| `styles.css`, блок «Technical works» | Показує `.maintenance` і ховає вкладки, панелі, кнопки (`html[data-maintenance] …`). |
+| `app.js` (`refresh()`), `generator.js` (`load()`) | Пропускають усі запити до Worker, поки атрибут стоїть. |
+
+**Перевірити локально:** тимчасово додати `data-maintenance` у `<html>` у `public/index.html` й відкрити сторінку не через localhost (напр. з файлу), після перевірки прибрати.

@@ -20,7 +20,7 @@ Deye Cloud → ScheduleDisconnectLight (C#) → Google Sheet + POST /api/ingest 
 
 Усі POST потребують заголовок `X-Ingest-Secret`. Дані зберігаються в KV (прив'язка `DATA`, namespace `C13PowerDashboard`). Знімок пишеться одразу при зміні статусу (мережа, генератор, інвертор), а при зміні лише часу вимірювання — не частіше ніж раз на 110 секунд (ліміт безкоштовного KV — 1000 записів/добу).
 
-Секрети: `npx wrangler secret put INGEST_SECRET` (спільний з C#), `npx wrangler secret put REPORT_PASSWORD` (необов'язково).
+Секрет: `npx wrangler secret put INGEST_SECRET` (спільний з C#).
 Локально: `.dev.vars` (див. `.dev.vars.example`), `npx wrangler dev`. Публікація: `npx wrangler deploy`.
 
 ## Сторінки
@@ -35,4 +35,4 @@ Deye Cloud → ScheduleDisconnectLight (C#) → Google Sheet + POST /api/ingest 
 
 ## Перевірки
 
-`npm test` — стани мережі/інвертора/батареї, часові пояси, ingest і хеші, звіт генератора з журналу, пароль звіту, підготовка сторінки.
+`npm test` — стани мережі/інвертора/батареї, часові пояси, ingest і хеші, звіт генератора з журналу, підготовка сторінки.
