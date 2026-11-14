@@ -1,9 +1,17 @@
 import { formatDuration, formatElapsed, formatKw, formatLiters, shortDate, fullDate, timeOf, dateOf, weekday, shiftDay, kyivToday, isDay, dayRange,
-  buildRows, needsRetry, statusLabel, MAX_RETRIES } from './generator-lib.js';
+  buildRows, statusLabel } from './generator-lib.js';
 
+// Tabs "Паливо та ТО" and "Генератор" of the main page. Both are fed by one request (/api/generator-report),
+// which is made only when one of these tabs is opened (the "Стан" tab does not need it).
 const $ = id => document.getElementById(id);
-let run = 0; // a newer request cancels the older one
-let sinceAt = null; // time of the last refuel: "time passed" is refreshed every half a minute
+const TABS = ['state', 'fuel', 'generator'];
+const DEFAULT_DAYS = 7;
+const RELOAD_AFTER_MS = 60000; // opening a tab again after this time asks for fresh data
+let run = 0;            // a newer request cancels the older one
+let tab = 'state';
+let loadedAt = 0;       // when the report was last loaded
+let loadedOnce = false;
+let authNeeded = false;
 
 // The password of the report is remembered in this browser (localStorage; if it is blocked, only until the page is closed).
 const PASSWORD_KEY = 'c13-report-password';
@@ -26,54 +34,16 @@ function el(tag, className, text) {
   return node;
 }
 function setNote(text, kind = '') {
-  const note = $('note');
+  const note = $('report-note');
   note.textContent = text;
   note.dataset.kind = kind;
-  note.hidden = !text;
+  note.hidden = !text || tab === 'state';
+  note.dataset.has = text ? '1' : '';
 }
 
-function renderSince(data) {
-  const since = data.since;
-  const card = $('since');
-  const facts = $('since-facts');
-  card.dataset.state = since ? (since.complete ? 'ok' : 'loading') : 'none';
-  facts.replaceChildren();
-  facts.hidden = true;
-  if (!data.refuelsConfigured) {
-    $('since-value').textContent = '—';
-    $('since-detail').textContent = 'Таблицю заправок не підключено.';
-    return;
-  }
-  if (!since) {
-    $('since-value').textContent = '—';
-    $('since-detail').textContent = data.refuelsError || 'У таблиці немає жодної заправки.';
-    return;
-  }
-  $('since-value').textContent = formatDuration(since.minutes);
-  // Three highlighted facts: the last refuel, how much was poured, how many starts since then.
-  const fact = (kind, label, value, suffix) => {
-    const tile = el('div', 'fact');
-    tile.dataset.kind = kind;
-    const big = el('b', 'fact-value');
-    big.append(el('span', 'fact-text', value));
-    const title = el('span', 'fact-label', label);
-    if (suffix) title.append(' ', el('small', 'fact-suffix', suffix)); // small lowercase note after the label
-    tile.append(title, big);
-    return tile;
-  };
-  facts.append(fact('refuel', 'Остання заправка', fullDate(dateOf(since.refuel.atLocal)) + ' ' + timeOf(since.refuel.atLocal)));
-  sinceAt = since.refuel.at;
-  facts.append(fact('elapsed', 'Пройшло часу', formatElapsed((Date.now() - sinceAt) / 60000), 'після заправки'));
-  if (since.refuel.liters !== null && since.refuel.liters !== undefined) facts.append(fact('liters', 'Заправлено', formatLiters(since.refuel.liters)));
-  if (since.refuel.by) facts.append(fact('by', 'Заправляв', since.refuel.by));
-  facts.append(fact('starts', 'Запусків за цей час', String(since.starts)));
-  facts.hidden = false;
-  const notes = [];
-  if (since.open) notes.push('Генератор працює зараз.');
-  if (!since.complete) notes.push('Частина днів ще завантажується…');
-  if (since.truncated) notes.push('Пораховано лише за останні 120 днів.');
-  $('since-detail').textContent = notes.join(' ');
-}
+// ---------- Journal ----------
+
+const refuelMark = refuel => el('div', 'refuel', 'Заправка ' + timeOf(refuel.atLocal) + ' · ' + formatLiters(refuel.liters) + (refuel.by ? ' · ' + refuel.by : ''));
 
 // expand: when only one day is shown, its sessions are opened at once.
 function renderRow(row, maxMinutes, expand = false) {
@@ -86,6 +56,7 @@ function renderRow(row, maxMinutes, expand = false) {
   if (row.status !== 'ok') {
     head.append(el('div', 'day-empty', statusLabel(row.status)));
     item.append(head);
+    for (const refuel of row.refuels) item.append(refuelMark(refuel));
     return item;
   }
   const bar = el('div', 'bar');
@@ -96,9 +67,7 @@ function renderRow(row, maxMinutes, expand = false) {
   const meta = el('div', 'day-meta', row.starts ? row.starts + ' ' + (row.starts === 1 ? 'запуск' : 'запусків') + ' · до ' + formatKw(row.peakW) : 'не працював');
   head.append(bar, total, meta);
   item.append(head);
-  for (const refuel of row.refuels) {
-    item.append(el('div', 'refuel', 'Заправка ' + timeOf(refuel.atLocal) + ' · ' + formatLiters(refuel.liters) + (refuel.by ? ' · ' + refuel.by : '')));
-  }
+  for (const refuel of row.refuels) item.append(refuelMark(refuel));
   if (row.sessions.length) {
     const details = el('details', 'sessions');
     details.open = expand;
@@ -112,11 +81,11 @@ function renderRow(row, maxMinutes, expand = false) {
       time.append(el('b', '', timeOf(s.startLocal)), el('span', 's-arrow', '→'));
       time.append(el('b', '', s.open ? 'працює' : timeOf(s.endLocal)));
       if (!s.open && dateOf(s.endLocal) !== row.date) time.append(el('span', 's-next', shortDate(dateOf(s.endLocal))));
-      const bar = el('span', 's-bar');
-      const fill = el('i');
-      fill.style.width = Math.max(6, s.minutes / longest * 100) + '%';
-      bar.append(fill);
-      li.append(time, bar, el('span', 's-dur', formatDuration(s.minutes)), el('span', 's-power', formatKw(s.peakW)));
+      const sBar = el('span', 's-bar');
+      const sFill = el('i');
+      sFill.style.width = Math.max(6, s.minutes / longest * 100) + '%';
+      sBar.append(sFill);
+      li.append(time, sBar, el('span', 's-dur', formatDuration(s.minutes)), el('span', 's-power', formatKw(s.peakW)));
       list.append(li);
     }
     details.append(list);
@@ -125,7 +94,6 @@ function renderRow(row, maxMinutes, expand = false) {
   return item;
 }
 
-// Loading visuals: skeleton cards until the first data arrive, and a small "bubbles" indicator while anything is loading.
 function skeletonRows(count) {
   return Array.from({ length: count }, () => {
     const item = el('li', 'day skeleton');
@@ -145,29 +113,45 @@ function markActivePreset(from, to) {
     button.dataset.active = to === kyivToday() && Number(button.dataset.days) === length ? '1' : '';
 }
 
-function renderRefuel(refuel) {
-  const item = el('li', 'refuel-item');
-  item.append(el('span', 'r-icon', '⛽'));
-  const when = el('span', 'r-when');
-  when.append(el('b', '', fullDate(dateOf(refuel.atLocal))), el('span', 'r-time', weekday(dateOf(refuel.atLocal)) + ', ' + timeOf(refuel.atLocal)));
-  item.append(when, el('span', 'r-liters', formatLiters(refuel.liters)));
-  if (refuel.by) item.append(el('span', 'r-by', refuel.by));
-  return item;
+// ---------- Fuel and service indicators ----------
+
+const INDICATOR_STALE_MIN = 30;
+// The sections come from the Worker already cleaned (b/i/u/blockquote and t.me links only), so innerHTML is safe here.
+function renderIndicators(indicators) {
+  const list = $('ind-list');
+  const at = $('ind-at');
+  list.replaceChildren();
+  at.textContent = '';
+  at.dataset.kind = '';
+  if (!indicators) {
+    list.append(el('p', 'ind-empty', 'Показники ще не надходили.'));
+    return;
+  }
+  const minutes = (Date.now() - indicators.at) / 60000;
+  const when = new Date(indicators.at).toLocaleString('uk-UA', { timeZone: 'Europe/Kyiv', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  at.textContent = 'Пораховано ' + when + ' · ' + formatElapsed(minutes) + ' тому';
+  at.dataset.kind = minutes > INDICATOR_STALE_MIN ? 'stale' : '';
+  for (const section of indicators.sections) {
+    const box = el('section', 'ind');
+    const title = el('h3', 'ind-title', section.title);
+    const body = el('div', 'ind-body');
+    body.innerHTML = section.html;
+    box.append(title, body);
+    list.append(box);
+  }
 }
 
+// ---------- Loading ----------
+
 function render(data, from, to) {
-  $('report').removeAttribute('data-first');
   markActivePreset(from, to);
-  renderSince(data);
+  renderIndicators(data.indicators);
   $('period-total').textContent = formatDuration(data.totalMinutes);
   $('period-starts').textContent = String(data.totalStarts);
-  $('period-label').textContent = fullDate(from) + ' – ' + fullDate(to);
+  $('period-label').textContent = fullDate(from) + (from === to ? ', ' + weekday(from) : ' – ' + fullDate(to));
   const rows = buildRows(from, to, data);
   const maxMinutes = Math.max(60, ...rows.map(r => r.minutes));
   $('days').replaceChildren(...rows.map(row => renderRow(row, maxMinutes, rows.length === 1)));
-  $('refuels').replaceChildren(...(data.refuels ?? []).slice().reverse().map(renderRefuel));
-  // The list of refuels is hidden for one day: the refuel is already shown inside the day card.
-  $('refuels-block').hidden = !(data.refuels ?? []).length || rows.length === 1;
 }
 
 async function fetchReport(base, from, to) {
@@ -182,56 +166,41 @@ async function fetchReport(base, from, to) {
   return data;
 }
 
-function endBoot() { $('report').removeAttribute('data-boot'); }
 function showAuth(message) {
-  endBoot();
-  $('report').dataset.auth = '1';
-  $('auth').hidden = false;
+  authNeeded = true;
   $('auth-error').textContent = message || '';
-  $('forget').hidden = true;
   $('password').value = '';
+  applyTab();
   $('password').focus();
 }
 function hideAuth() {
-  $('report').removeAttribute('data-auth');
-  $('auth').hidden = true;
+  authNeeded = false;
   $('auth-error').textContent = '';
-  $('forget').hidden = !password;
+  applyTab();
 }
 
 async function load(from, to) {
   const mine = ++run;
   const base = apiBase();
-  if (!base) { endBoot(); setNote('Не вказано адресу сервера.', 'error'); return; }
+  if (!base) { setNote('Не вказано адресу сервера.', 'error'); return; }
   $('apply').disabled = true;
-  $('report').dataset.state = 'loading';
-  $('period-label').textContent = fullDate(from) + ' – ' + fullDate(to);
+  $('period-label').textContent = fullDate(from) + (from === to ? ', ' + weekday(from) : ' – ' + fullDate(to));
   markActivePreset(from, to);
   setLoader('Завантажую дані…');
   setNote('');
+  $('analysis').dataset.state = 'loading';
   try {
-    let data = await fetchReport(base, from, to);
-    for (let attempt = 1; needsRetry(data) && attempt <= MAX_RETRIES && mine === run; attempt++) {
-      render(data, from, to);
-      setLoader('Довантажую дані з Deye… (' + attempt + ')');
-      await new Promise(resolve => setTimeout(resolve, 1200));
-      if (mine !== run) return;
-      data = await fetchReport(base, from, to);
-    }
+    const data = await fetchReport(base, from, to);
     if (mine !== run) return;
     if (password) savePassword(password); // saved only after the server accepted it
-    endBoot();
     hideAuth();
     render(data, from, to);
-    if (needsRetry(data)) setNote('Частину днів ще не завантажено. Натисніть «Показати» ще раз.', 'warn');
-    else if (data.refuelsError) setNote(data.refuelsError, 'warn');
-    else setNote('');
+    loadedAt = Date.now();
+    loadedOnce = true;
     $('updated').textContent = 'Оновлено ' + new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
-    $('report').dataset.state = 'ready';
+    $('analysis').dataset.state = 'ready';
   } catch (error) {
     if (mine !== run) return;
-    $('report').removeAttribute('data-first');
-    endBoot();
     if (error instanceof AuthError) {
       // A wrong remembered password is forgotten; the form asks for a new one.
       const wrong = Boolean(password);
@@ -241,13 +210,15 @@ async function load(from, to) {
       return;
     }
     setNote(error.message, 'error');
-    $('report').dataset.state = 'error';
+    $('analysis').dataset.state = 'error';
     $('days').replaceChildren();
-    $('since-value').textContent = '—';
+    $('ind-list').replaceChildren(el('p', 'ind-empty', 'Не вдалося завантажити показники.'));
   } finally {
     if (mine === run) { $('apply').disabled = false; setLoader(''); }
   }
 }
+
+// ---------- Period controls ----------
 
 function readPeriod() {
   const from = $('from').value;
@@ -263,13 +234,44 @@ function preset(days) {
   $('from').value = shiftDay(to, -(days - 1));
   load($('from').value, $('to').value);
 }
+const reload = () => load($('from').value, $('to').value);
+
+// ---------- Tabs ----------
+
+function tabFromHash() {
+  const name = location.hash.slice(1);
+  return TABS.includes(name) ? name : 'state';
+}
+// Shows the panes of the current tab; while the password is requested only the form is shown instead of the report.
+function applyTab() {
+  for (const button of document.querySelectorAll('[data-tab]')) button.setAttribute('aria-selected', String(button.dataset.tab === tab));
+  for (const pane of document.querySelectorAll('[data-pane]')) pane.hidden = pane.dataset.pane !== tab || (authNeeded && tab !== 'state');
+  $('auth').hidden = !(authNeeded && tab !== 'state');
+  $('report-note').hidden = tab === 'state' || !$('report-note').dataset.has;
+  $('forget').hidden = !password || tab === 'state' || authNeeded;
+}
+function showTab(name, updateAddress = true) {
+  tab = name;
+  applyTab();
+  if (updateAddress) {
+    try { history.replaceState(null, '', name === 'state' ? location.pathname + location.search : '#' + name); } catch { /* the address stays as it is */ }
+  }
+  // Data of the report are loaded when its tab is opened for the first time and again when they are older than a minute.
+  if (name !== 'state' && !authNeeded && (!loadedOnce || Date.now() - loadedAt > RELOAD_AFTER_MS)) reload();
+}
 
 function start() {
   const today = kyivToday();
   $('to').max = today;
   $('from').max = today;
   $('to').value = today;
-  $('from').value = shiftDay(today, -6); // by default the last 7 days
+  $('from').value = shiftDay(today, -(DEFAULT_DAYS - 1));
+  $('days').replaceChildren(...skeletonRows(2));
+
+  for (const button of document.querySelectorAll('[data-tab]')) button.addEventListener('click', () => showTab(button.dataset.tab));
+  // The link on the generator card (#fuel) and the browser's back button change the address: follow it.
+  window.addEventListener('hashchange', () => showTab(tabFromHash(), false));
+
   $('controls').addEventListener('submit', event => {
     event.preventDefault();
     const period = readPeriod();
@@ -282,8 +284,7 @@ function start() {
     if (!typed) return;
     password = typed;
     $('auth-error').textContent = '';
-    $('report').dataset.state = 'loading';
-    load($('from').value, $('to').value);
+    reload();
   });
   $('forget').addEventListener('click', () => {
     if (!confirm('Ви впевнені, що хочете забути пароль на цьому пристрої?\nДля наступного входу його потрібно буде ввести знову.')) return;
@@ -291,14 +292,9 @@ function start() {
     forgetPassword();
     showAuth('');
   });
-  $('days').replaceChildren(...skeletonRows(5));
-  setInterval(() => {
-    const value = document.querySelector('.fact[data-kind="elapsed"] .fact-text');
-    if (value && sinceAt !== null) value.textContent = formatElapsed((Date.now() - sinceAt) / 60000);
-  }, 30000);
-  // A remembered password is most likely valid: show the page with its loading skeleton at once.
-  // Without it the page stays blank until the server answers (a password form instead of a skeleton that disappears).
-  if (password) endBoot();
-  load($('from').value, $('to').value);
+  // The refresh button of the page header reloads the report when one of its tabs is open (the state is refreshed by app.js).
+  $('refresh').addEventListener('click', () => { if (tab !== 'state' && !authNeeded) reload(); });
+
+  showTab(tabFromHash(), false);
 }
 start();

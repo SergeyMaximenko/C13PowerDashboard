@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { formatDuration, formatElapsed, formatKw, formatLiters, shortDate, fullDate, timeOf, weekday, shiftDay, kyivToday, dayRange, isDay,
-  groupSessions, buildRows, needsRetry, statusLabel } from '../public/generator-lib.js';
+  groupSessions, buildRows, statusLabel } from '../public/generator-lib.js';
 
 test('formatting: duration, kW, liters, dates', () => {
   assert.equal(formatDuration(0), '0 хв');
@@ -42,7 +42,7 @@ const data = {
     { startLocal: '2026-11-06 14:36', endLocal: '2026-11-06 16:43', minutes: 128, peakW: 51562, open: false },
     { startLocal: '2026-11-06 23:32', endLocal: '2026-11-07 00:08', minutes: 36, peakW: 49653, open: false }
   ],
-  missingDays: [{ date: '2026-11-05', reason: 'no-data' }, { date: '2026-11-08', reason: 'pending' }]
+  missingDays: [{ date: '2026-11-05', reason: 'no-data', refuels: [{ atLocal: '2026-11-05 09:00', liters: 20 }] }, { date: '2026-11-08', reason: 'pending' }]
 };
 
 test('rows: one per day, newest first, sessions grouped by the day they start, missing days marked', () => {
@@ -53,13 +53,6 @@ test('rows: one per day, newest first, sessions grouped by the day they start, m
   assert.equal(nov6.refuels[0].liters, 110);
   assert.equal(rows.find(r => r.date === '2026-11-07').sessions.length, 0);
   assert.equal(groupSessions(undefined).size, 0);
-  assert.equal(statusLabel('pending'), 'завантажується…');
-});
-
-test('retry: only while days are pending or the sum since the refuel is incomplete', () => {
-  assert.equal(needsRetry(data), true);
-  assert.equal(needsRetry({ missingDays: [{ date: 'x', reason: 'no-data' }], since: { complete: true } }), false);
-  assert.equal(needsRetry({ missingDays: [], since: { complete: false } }), true);
-  assert.equal(needsRetry({ missingDays: [], since: null }), false);
-  assert.equal(needsRetry(null), false);
+  assert.equal(rows.find(r => r.date === '2026-11-05').refuels[0].liters, 20); // a refuel is shown also on a day without journal data
+  assert.equal(statusLabel('no-data'), 'немає даних');
 });

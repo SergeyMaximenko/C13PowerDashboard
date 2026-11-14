@@ -7,5 +7,5 @@ test-results/
 !.env.example
 .dev.vars
 .wrangler/
-deye-settings.json
 dist/
+.vscode/

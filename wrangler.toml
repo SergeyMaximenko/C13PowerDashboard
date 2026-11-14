@@ -5,21 +5,14 @@ compatibility_flags = ["nodejs_compat"]
 workers_dev = true     # адреса https://c13-power.sergeymaximenko.workers.dev
 preview_urls = false   # не створювати зайві публічні адреси для кожної версії
 
-# Не секретні налаштування. Секрети (App ID, App Secret, логін, пароль) задаються окремо:
-#   npx wrangler secret put DEYE_APP_SECRET   і т. д.
-[vars]
-DEYE_STATION_ID = "62524584"
-DEYE_STATION_NAME = "Чавдар 13"
-CACHE_SECONDS = "120"        # як довго Worker віддає ту саму відповідь без звернення до Deye
-# Історію (мережа з'явилась / зникла) Worker завантажує лише коли з'явилося нове вимірювання інвертора.
-# Додаткові станції, доступні через ?station=ID. Формат: "ID:назва,ID:назва". Без параметра — головна станція.
-ALLOWED_STATION_IDS = "61167187:Максименко"
+# Worker нічого не бере з Deye: усі дані надсилає C#-застосунок (ScheduleDisconnectLight), див. INGEST.md.
+# Секрети (задаються окремо, не в цьому файлі):
+#   npx wrangler secret put INGEST_SECRET     - спільний секрет з C# (X-Ingest-Secret)
+#   npx wrangler secret put REPORT_PASSWORD   - пароль звіту про генератор (необов'язково)
+# [vars]
 # ALLOWED_ORIGIN = "https://sergeymaximenko.github.io"   # коли буде адреса сторінки
 
-# Підсумки днів роботи генератора (/api/generator) зберігаються в KV. Створення:
-#   npx wrangler kv namespace create GEN
-# Без KV усе працює, але минулі дні перераховуються після перезапуску Worker.
-# Цей блок має залишатися в кінці файлу (після [vars]).
+# Сховище даних (KV namespace "C13PowerDashboard"): знімок стану, журнал, заправки.
 [[kv_namespaces]]
-binding = "GEN"
-id = "57017f5a958d4eacbaa80caff64a7f47"
+binding = "DATA"     # у коді env.DATA
+id = "c74fddef74834634b3c8e253e9227ab9"

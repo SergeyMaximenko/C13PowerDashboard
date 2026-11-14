@@ -29,20 +29,16 @@ test('Pages artifact has relative assets, versioned script and styles, and no se
     const styleHash = createHash('sha256').update(await readFile(new URL('../public/styles.css', import.meta.url))).digest('hex').slice(0, 16);
     assert.ok(html.includes('href="./styles.css?v=' + styleHash + '"'));
     assert.deepEqual((await readdir(directory)).sort(), ['.nojekyll', 'app.js', 'favicon.svg', 'index.html', 'styles.css', 'iphone-step-1.png', 'iphone-step-2.png', 'iphone-step-3.png',
-      'generator.html', 'generator.js', 'generator-lib.js', 'generator.css'].sort());
-    // The separate report page: versioned script, styles and the import of the helper module.
-    const report = await readFile(path.join(directory, 'generator.html'), 'utf8');
+      'generator.js', 'generator-lib.js'].sort());
+    // The tabs script ("Паливо та ТО", "Генератор"): versioned, and the import of the helper module is versioned too.
     const script = await readFile(path.join(directory, 'generator.js'), 'utf8');
     const hash = file => readFile(new URL('../public/' + file, import.meta.url)).then(bytes => createHash('sha256').update(bytes).digest('hex').slice(0, 16));
-    assert.ok(report.includes('src="./generator.js?v=' + createHash('sha256').update(script).digest('hex').slice(0, 16) + '"'));
-    assert.ok(report.includes('href="./generator.css?v=' + await hash('generator.css') + '"'));
+    assert.ok(html.includes('src="./generator.js?v=' + createHash('sha256').update(script).digest('hex').slice(0, 16) + '"'));
     assert.ok(script.includes("from './generator-lib.js?v=" + await hash('generator-lib.js') + "'"));
-    assert.match(report, /name="dashboard-api" content="https:\/\/[^"]+"/);
-    // The report page has a password field (empty); no secret value or secret name may be in it.
-    assert.ok(!/secret|token|REPORT_PASSWORD/i.test(report));
-    assert.ok(!/type="password"[^>]*value=/i.test(report));
+    // The password field is empty; no secret value or secret name may be in the page.
+    assert.ok(!/type="password"[^>]*value=/i.test(html));
     assert.match(html, /name="dashboard-api" content="https:\/\/[^"]+"/);
-    assert.ok(!/secret|password|token/i.test(html));
+    assert.ok(!/secret|token|REPORT_PASSWORD/i.test(html));
   } finally {
     const resolved = path.resolve(directory);
     assert.ok(resolved.startsWith(path.resolve(os.tmpdir()) + path.sep));
@@ -69,13 +65,7 @@ test('the page reads live data from the configured Worker address', async () => 
   assert.equal(calls[0], 'https://c13.example.workers.dev/api/status');
 });
 
-test('the page may open another allowed station with ?station=ID and ignores invalid values', async () => {
-  const other = await browserApi('https://c13.example.workers.dev', '?station=61167187');
-  await other.api();
-  assert.equal(other.calls[0], 'https://c13.example.workers.dev/api/status?station=61167187');
-  const invalid = await browserApi('https://c13.example.workers.dev', '?station=abc');
-  await invalid.api();
-  assert.equal(invalid.calls[0], 'https://c13.example.workers.dev/api/status');
+test('the page reads from a local Worker only for localhost and ignores foreign ?api', async () => {
   const local = await browserApi('https://c13.example.workers.dev', '?api=http://127.0.0.1:8787');
   await local.api();
   assert.equal(local.calls[0], 'http://127.0.0.1:8787/api/status');

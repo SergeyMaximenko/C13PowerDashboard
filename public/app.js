@@ -8,6 +8,7 @@ const WARN_AFTER_MS = 15 * 60000;  // the "Пройшло …" badge turns yello
 let snapshot = null, loading = false, requestVersion = 0, lastLoadedAt = 0, retries = 0;
 let displayedMeasurementTime = null;
 let displayedGridEvent = null;
+let displayedGenerator = null;
 const isExample = () => $('view-mode').value !== 'live';
 // First load: grey bars in the cards and bouncing bubbles instead of the cloud-delay note.
 function setLoading(on) {
@@ -70,6 +71,22 @@ function updateGridDuration() {
     measurementAge(event.at, now).replace(/^Пройшло /, '') : '';
   if (!valid) $('grid-event').hidden = true;
 }
+// Last generator run: "Запущено", "Зупинено" and how long it ran (still running: how long it has been running).
+function updateGeneratorTimes() {
+  const box = $('generator-times');
+  const badge = $('generator-duration');
+  const run = displayedGenerator;
+  box.hidden = badge.hidden = !run;
+  if (!run) { box.textContent = badge.textContent = ''; return; }
+  const now = Date.now();
+  const stamp = value => (date.format(value) !== date.format(now) ? date.format(value) + ', ' : '') + clock.format(value);
+  // Hours and minutes, no seconds.
+  const age = value => measurementAge(value, now).replace(/^Пройшло /, '').replace(/ \d+ с\.$/, '');
+  if (run.state === 'off' && !run.stoppedAt) { box.hidden = badge.hidden = true; return; }
+  const stopped = run.state === 'off';
+  box.textContent = stopped ? 'Зупинено ≈ ' + stamp(run.stoppedAt) : 'Запустився ≈ ' + stamp(run.startedAt);
+  badge.textContent = stopped ? 'Відпочиває ≈ ' + age(run.stoppedAt) : 'Працює ≈ ' + age(run.startedAt);
+}
 function measurementDateLabel(timestamp, now = Date.now()) {
   const calendar = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Europe/Kyiv', year: 'numeric', month: '2-digit', day: '2-digit'
@@ -106,6 +123,10 @@ function render(data, example = false) {
   $('grid-detail').textContent = grid === 'on' ? 'Напруга є на всіх фазах' :
     grid === 'off' ? (data.allPhasesZero ? 'Усі фази: 0 В' : 'Немає вхідної напруги') :
     grid === 'unstable' ? 'Перевірте стан фаз' : 'Немає актуальних показників';
+  const voltage = data.gridVoltage;
+  $('grid-load').hidden = !(grid === 'on' && Number.isFinite(voltage) && voltage > 0);
+  $('grid-detail').hidden = !$('grid-load').hidden;
+  $('grid-voltage').textContent = Number.isFinite(voltage) ? Math.round(voltage) : '—';
   const event = data.historyError || data.historyAvailable === false ? null :
     grid === 'on' ? data.events?.appeared : grid === 'off' ? data.events?.disappeared : null;
   // The history only says that the state changed between two measurements (from..to). The midpoint is misleading after a gap in the data
@@ -133,10 +154,14 @@ function render(data, example = false) {
   $('generator-power').textContent = !Number.isFinite(generatorWatts) ? '—' :
     decimal.format(generatorWatts < 1000 ? generatorWatts : generatorWatts / 1000);
   $('generator-unit').textContent = Number.isFinite(generatorWatts) && generatorWatts < 1000 ? 'Вт' : 'кВт';
-  $('generator-detail').textContent = generator === 'on'
-    ? (Number.isFinite(data.generator?.voltageV) ? 'Напруга генератора: ' + Math.round(data.generator.voltageV) + ' В' : 'Напруга є')
+  $('generator-extra').textContent = Number.isFinite(data.generator?.voltageV) && data.generator.voltageV > 0 ? '· ' + Math.round(data.generator.voltageV) + ' В' : '';
+  $('generator-detail').hidden = generator === 'on'; // power and voltage are in the metric row
+  $('generator-detail').textContent = generator === 'on' ? 'Напруга є'
     : generator === 'starting' ? 'Генератор запущено, чекаємо підключення'
     : generatorKnown ? 'Генератор в режимі очікування' : 'Немає актуальних показників';
+  displayedGenerator = !stale && generatorKnown && Number.isFinite(data.generator?.startedAt)
+    ? { state: generator, startedAt: data.generator.startedAt, stoppedAt: data.generator.stoppedAt ?? null } : null;
+  updateGeneratorTimes();
   const operation = inverterState(data, stale);
   $('output-card').dataset.state = ({ supplying: 'on', charging: 'on', standby: 'standby', off: 'off', unknown: 'unknown' })[operation];
   $('output-value').textContent = ({
@@ -181,8 +206,14 @@ function render(data, example = false) {
   const batteryPower = batteryWatts === null ? '' :
     ' · ' + decimal.format(batteryWatts < 1000 ? batteryWatts : batteryWatts / 1000) + (batteryWatts < 1000 ? ' Вт' : ' кВт');
   const idleText = soc != null && soc >= 99 ? 'Повністю заряджена' : 'У режимі очікування';
-  $('battery-mode').textContent = stale ? 'Немає актуальних показників' :
-    (({ discharging: 'Розряджається', charging: 'Заряджається', idle: idleText, unknown: 'Стан заряду невідомий' })[data.batteryMode] || 'Стан заряду невідомий') + batteryPower;
+  const modeText = (({ discharging: 'Розряджається', charging: 'Заряджається', idle: idleText, unknown: 'Стан заряду невідомий' })[data.batteryMode] || 'Стан заряду невідомий');
+  $('battery-mode').textContent = stale ? 'Немає актуальних показників' : modeText + batteryPower;
+  // With a real power the mode becomes the label of the same "metric row" the other cards use.
+  $('battery-load').hidden = stale || batteryWatts === null;
+  $('battery-mode').hidden = !$('battery-load').hidden;
+  $('battery-load-label').textContent = modeText;
+  $('battery-load-value').textContent = batteryWatts === null ? '—' : decimal.format(batteryWatts < 1000 ? batteryWatts : batteryWatts / 1000);
+  $('battery-load-unit').textContent = batteryWatts !== null && batteryWatts < 1000 ? 'Вт' : 'кВт';
   // Warning for residents: the battery feeds the house and will switch off at 15%.
   $('battery-warning').hidden = !(!stale && grid === 'off' && data.batteryMode === 'discharging');
   $('update-note').textContent = example ? 'Демонстраційні значення для перегляду оформлення' : '';
@@ -199,10 +230,12 @@ function example(mode) {
   const mains = mode === 'on' || mode === 'standby';
   return { station: { name: 'Чавдар 13' }, collectedAt: now - (mode === 'stale' ? 1860000 : 300000),
     stale: mode === 'stale', grid: mains ? 'on' : 'off', output: mode === 'output-off' ? 'off' : 'on',
-    allPhasesZero: !mains, soc: mode === 'on' ? 82 : mode === 'standby' ? 100 : mode === 'output-off' ? 10 : 61,
+    allPhasesZero: !mains, gridVoltage: mains ? 231 : 0, soc: mode === 'on' ? 82 : mode === 'standby' ? 100 : mode === 'output-off' ? 10 : 61,
     batteryMode: mode === 'on' || mode === 'generator' ? 'charging' : ['standby', 'output-off'].includes(mode) ? 'idle' : 'discharging',
     generator: { state: mode === 'generator' ? 'on' : mode === 'generator-start' ? 'starting' : 'off',
-      powerW: mode === 'generator' ? 22000 : 0, voltageV: mode === 'generator' || mode === 'generator-start' ? 235 : 0 },
+      powerW: mode === 'generator' ? 22000 : 0, voltageV: mode === 'generator' || mode === 'generator-start' ? 235 : 0,
+      startedAt: mode === 'generator' ? now - 2520000 : mode === 'generator-start' ? now - 120000 : now - 18000000,
+      stoppedAt: mode === 'generator' || mode === 'generator-start' ? null : now - 11400000 },
     loadWatts: mains || mode === 'output-off' ? 0 : 16800,
     batteryWatts: mode === 'on' || mode === 'generator' ? -33200 : ['standby', 'output-off'].includes(mode) ? 0 : 17100,
     events: { appeared: { at: now - 3600000 }, disappeared: { at: now - 10800000 } } };
@@ -215,9 +248,6 @@ async function api() {
     : document.querySelector('meta[name="dashboard-api"]')?.content?.trim();
   if (!apiUrl) throw new Error('Не вказано адресу джерела даних.');
   const source = new URL('/api/status', apiUrl);
-  // Optional: ?station=ID opens another station from the Worker's allowed list. Default: the main station.
-  const station = query.get('station');
-  if (station && /^\d{1,20}$/.test(station)) source.searchParams.set('station', station);
   let response;
   try { response = await fetch(source, { cache: 'no-store', signal: AbortSignal.timeout(45000) }); }
   catch (error) {
@@ -283,17 +313,13 @@ $('view-mode').addEventListener('change', () => {
 refresh();
 // No periodic polling: data are loaded when the page opens, on the refresh button, and when the user comes back
 // to the page after a while (at most once a minute), so an idle page makes no requests.
-setInterval(() => { updateMeasurementAge(); updateGridDuration(); }, 1000);
+setInterval(() => { updateMeasurementAge(); updateGridDuration(); updateGeneratorTimes(); }, 1000);
 setInterval(() => {
   if (!isExample() && snapshot && Date.now() - snapshot.collectedAt > STALE_AFTER_MS) render(snapshot);
 }, 15000);
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && Date.now() - lastLoadedAt > 60000) refresh();
 });
-
-// The link "Деталі по генератору" opens the separate report page. ?api=... (a local Worker for testing) is passed on.
-const generatorDetails = $('generator-details');
-if (generatorDetails && location.search) generatorDetails.href = './generator.html' + location.search;
 
 const installHelp = $('install-help');
 $('open-install-help').addEventListener('click', () => installHelp.showModal());

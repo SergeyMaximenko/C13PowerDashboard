@@ -1,5 +1,5 @@
 name: Publish dashboard
-# Сторінка сама читає дані з Cloudflare Worker, тому секрети Deye тут не потрібні.
+# Сторінка читає дані з Cloudflare Worker, секрети тут не потрібні.
 # Публікація запускається після кожного push у main і вручну (Run workflow).
 on:
   workflow_dispatch:

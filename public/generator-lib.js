@@ -1,6 +1,5 @@
 // Pure helpers of the generator page (no DOM): formatting, periods, rows of the table. Covered by tests/generator-page.test.mjs.
 export const WEEKDAYS = ['нд', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
-export const MAX_RETRIES = 12;
 
 export function formatDuration(minutes) {
   const total = Math.max(0, Math.round(Number(minutes) || 0));
@@ -61,19 +60,16 @@ export function groupSessions(sessions) {
 // One row per calendar day of the period (newest first), also for days without data.
 export function buildRows(from, to, data) {
   const byDay = new Map((data?.days ?? []).map(d => [d.date, d]));
-  const missing = new Map((data?.missingDays ?? []).map(d => [d.date, d.reason]));
+  const missing = new Map((data?.missingDays ?? []).map(d => [d.date, d]));
   const sessions = groupSessions(data?.sessions);
   return dayRange(from, to).reverse().map(date => {
     const day = byDay.get(date);
     if (day) return { date, status: 'ok', minutes: day.minutes, starts: day.starts, peakW: day.peakW, refuels: day.refuels ?? [], sessions: sessions.get(date) ?? [] };
-    return { date, status: missing.get(date) ?? 'no-data', minutes: 0, starts: 0, peakW: 0, refuels: [], sessions: [] };
+    const gap = missing.get(date);
+    return { date, status: gap?.reason ?? 'no-data', minutes: 0, starts: 0, peakW: 0, refuels: gap?.refuels ?? [], sessions: [] };
   });
 }
 
-// Part of the days is loaded by the Worker in portions: ask again while something is still "pending".
-export function needsRetry(data) {
-  return Boolean(data) && ((data.missingDays ?? []).some(d => d.reason === 'pending') || (data.since != null && data.since.complete === false));
-}
 export function statusLabel(status) {
-  return { 'no-data': 'немає даних', pending: 'завантажується…', error: 'помилка Deye' }[status] ?? '';
+  return status === 'no-data' ? 'немає даних' : '';
 }

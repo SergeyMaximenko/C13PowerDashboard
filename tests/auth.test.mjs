@@ -2,13 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHandler } from '../worker/index.mjs';
 
-const base = { DEYE_APP_ID: 'a', DEYE_APP_SECRET: 's', DEYE_LOGIN: 'l', DEYE_PASSWORD: 'p', DEYE_STATION_ID: '1' };
 const at = text => Date.parse(text + '+02:00');
-const factory = () => ({
-  generatorSamples: async (station, date) => [{ time: at(date + 'T10:00:00'), on: true, powerW: 5000 }, { time: at(date + 'T10:05:00'), on: false, powerW: 0 }],
-  dashboard: async () => ({ station: { name: 'T' }, collectedAt: at('2026-11-09T12:00:00'), diagnostics: {} })
-});
-const make = () => createHandler({ clientFactory: factory, now: () => at('2026-11-09T12:00:00') });
+const kv = data => ({ get: async key => data[key] ?? null, put: async () => {} });
+const base = { DATA: kv({
+  'ingest:journal': { hash: 'j', rows: [{ object: 'Генератор', at: at('2026-11-08T10:00:00'), onOff: 1 }, { object: 'Генератор', at: at('2026-11-08T10:05:00'), onOff: 0 }] },
+  'ingest:snapshot': { receivedAt: at('2026-11-09T11:59:00'), snapshot: { measuredAt: at('2026-11-09T11:58:00'), gridStatus: 1 } }
+}) };
+const make = () => createHandler({ now: () => at('2026-11-09T12:00:00') });
 const ask = (handle, path, password, ip = '1.1.1.1', env = { ...base, REPORT_PASSWORD: '13' }) => handle(new Request('https://x.test' + path, {
   headers: { 'CF-Connecting-IP': ip, ...(password === undefined ? {} : { 'X-Report-Password': encodeURIComponent(password) }) } }), env);
 
@@ -45,7 +45,7 @@ test('without the secret the report stays open (backward compatible); the browse
 
 test('too many wrong attempts from one address are blocked for 10 minutes, other addresses are not affected', async () => {
   let clock = at('2026-11-09T12:00:00');
-  const handle = createHandler({ clientFactory: factory, now: () => clock });
+  const handle = createHandler({ now: () => clock });
   const path = '/api/generator-report?from=2026-11-09&to=2026-11-09';
   for (let i = 0; i < 10; i++) assert.equal((await ask(handle, path, 'x' + i, '4.4.4.4')).status, 401);
   assert.equal((await ask(handle, path, '13', '4.4.4.4')).status, 429); // even the right password waits

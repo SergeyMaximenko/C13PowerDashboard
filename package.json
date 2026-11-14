@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Power dashboard for Chavdar 13: static page plus Cloudflare Worker for Deye Cloud",
+  "description": "Power dashboard for Chavdar 13: static page plus Cloudflare Worker fed by the C# application",
   "engines": {
     "node": ">=22"
   },
