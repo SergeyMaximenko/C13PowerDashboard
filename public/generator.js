@@ -180,6 +180,7 @@ function hideAuth() {
 }
 
 async function load(from, to) {
+  if (document.documentElement.hasAttribute('data-maintenance')) return; // technical works: no requests
   const mine = ++run;
   const base = apiBase();
   if (!base) { setNote('Не вказано адресу сервера.', 'error'); return; }

@@ -418,3 +418,10 @@ dialog::backdrop { background: #14273e60; backdrop-filter: blur(5px); }
   .session { grid-template-columns: 1fr auto auto; }
   .s-bar { grid-column: 1 / -1; order: 5; }
 }
+
+/* Technical works: <html data-maintenance> shows only the message. To bring the page back, remove that attribute from index.html. */
+.maintenance { display: none; margin: 8px 0 24px; padding: 40px 32px; border-radius: 22px; border: 1px solid #e0e8ee; background: #fff; text-align: center; box-shadow: 0 10px 26px #1c3c5510; }
+.maintenance h2 { margin: 0 0 10px; font-size: 26px; color: #16374b; }
+.maintenance p { margin: 0; color: var(--muted); font-size: 17px; }
+html[data-maintenance] .maintenance { display: block; }
+html[data-maintenance] :is(.tabs, .pane, .auth, .report-note, .report-foot, .header-actions, .install-help-button) { display: none !important; }

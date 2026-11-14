@@ -258,8 +258,9 @@ async function api() {
   if (!data || !Number.isFinite(data.collectedAt)) throw new Error('Немає коректного часу вимірювання.');
   return data;
 }
+// Technical works: while <html data-maintenance> is set the page calls no server (see also load() in generator.js).
 async function refresh() {
-  if (isExample() || loading) return;
+  if (document.documentElement.hasAttribute('data-maintenance') || isExample() || loading) return;
   const version = requestVersion;
   loading = true; $('refresh').disabled = true; $('refresh').classList.add('spinning');
   // Skeleton only on the very first load: later refreshes keep the numbers on screen.
