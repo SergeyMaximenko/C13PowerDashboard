@@ -156,3 +156,21 @@ test('ingest: fuelPercent is validated, published in /api/status and kept when a
   await handle(post('/api/ingest', { schemaVersion: 1, snapshot: { ...snapshot, measuredAt: time - 1000, fuelPercent: 45 } }), e);
   assert.equal((await status()).fuelPercent, 45);
 });
+
+test('ingest: fuelRemaining text is validated, published and kept when a run sends none', async () => {
+  let time = NOW;
+  const handle = createHandler({ now: () => time });
+  const e = env();
+  const status = async () => (await handle(new Request('https://x/api/status'), e)).json();
+
+  await handle(post('/api/ingest', { schemaVersion: 1, snapshot: { ...snapshot, fuelRemaining: '9 год 4 хв' } }), e);
+  assert.equal((await status()).fuelRemaining, '9 год 4 хв');
+
+  time += 120000; // none sent: the previous text stays
+  await handle(post('/api/ingest', { schemaVersion: 1, snapshot: { ...snapshot, measuredAt: time - 1000 } }), e);
+  assert.equal((await status()).fuelRemaining, '9 год 4 хв');
+
+  time += 120000; // markup is rejected, the previous text stays
+  await handle(post('/api/ingest', { schemaVersion: 1, snapshot: { ...snapshot, measuredAt: time - 1000, fuelRemaining: '<b>x</b>' } }), e);
+  assert.equal((await status()).fuelRemaining, '9 год 4 хв');
+});

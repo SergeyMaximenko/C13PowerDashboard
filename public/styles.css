@@ -309,7 +309,7 @@ dialog::backdrop { background: #14273e60; backdrop-filter: blur(5px); }
 }
 
 /* Fuel tank in the generator card: the fill height follows --fuel (0..1), the colour follows data-level. */
-.fuel { --c: var(--green); display: flex; align-items: center; gap: 14px; margin-top: 14px; padding-top: 14px; border-top: 1px solid #dce9e3; }
+.fuel { --c: var(--green); display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px 14px; margin-top: 14px; padding-top: 14px; border-top: 1px solid #dce9e3; }
 .fuel[data-level="mid"] { --c: var(--amber); }
 .fuel[data-level="low"] { --c: var(--red); }
 .fuel .tank { width: 44px; height: 59px; stroke: none; stroke-width: 0; overflow: visible; }
@@ -317,7 +317,12 @@ dialog::backdrop { background: #14273e60; backdrop-filter: blur(5px); }
 .tank-fill { fill: var(--c); opacity: .92; transform-box: fill-box; transform-origin: 50% 100%; transform: scaleY(var(--fuel, 0)); transition: transform .6s ease; }
 .tank-frame { fill: none; stroke: #5f7a92; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .tank-mark { fill: none; stroke: #5f7a92; stroke-width: 1.5; opacity: .7; }
-.fuel p { margin: 2px 0 0; display: flex; align-items: baseline; gap: 3px; }
+.fuel-left { display: inline-block; margin-left: 4px; padding: 1px 8px; border: 1px solid var(--c); border-radius: 8px; font-size: inherit; font-weight: 650; color: var(--c); white-space: nowrap; }
+/* Small screens: the time goes under the text as its own line, left-aligned, instead of wrapping by chance. */
+@media (max-width: 440px) { .fuel-left { display: table; margin: 5px 0 0; } }
+.fuel-label { grid-column: 1 / -1; }
+/* The tank body sits a bit lower than the middle of its drawing, so the number is shifted to match the body centre. */
+.fuel p { margin: 0; display: flex; align-items: baseline; gap: 3px; transform: translateY(3px); }
 .fuel strong { font-size: 32px; letter-spacing: -1px; font-weight: 700; color: var(--c); font-variant-numeric: tabular-nums; }
 .fuel p > span { font-size: 18px; color: var(--c); }
 

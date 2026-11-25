@@ -165,6 +165,16 @@ function render(data, example = false) {
     $('fuel').dataset.level = fuelPercent > 50 ? 'ok' : fuelPercent > 20 ? 'mid' : 'low';
     $('fuel').style?.setProperty('--fuel', String(fuelPercent / 100));
     $('fuel-pct').textContent = String(Math.round(fuelPercent));
+    // With a ready "lasts for" text the label becomes "Палива в баці вистачить на <time>", the time is highlighted.
+    const remaining = typeof data.fuelRemaining === 'string' ? data.fuelRemaining.trim() : '';
+    const label = $('fuel-label');
+    label.textContent = remaining ? 'Палива в баці вистачить на ' : 'Паливо в баці';
+    if (remaining && label.append) {
+      const time = document.createElement('b');
+      time.className = 'fuel-left';
+      time.textContent = remaining;
+      label.append(time);
+    }
   }
   displayedGenerator = !stale && generatorKnown && Number.isFinite(data.generator?.startedAt)
     ? { state: generator, startedAt: data.generator.startedAt, stoppedAt: data.generator.stoppedAt ?? null } : null;
@@ -240,6 +250,7 @@ function example(mode) {
       startedAt: mode === 'generator' ? now - 2520000 : mode === 'generator-start' ? now - 120000 : now - 18000000,
       stoppedAt: mode === 'generator' || mode === 'generator-start' ? null : now - 11400000 },
     fuelPercent: mode === 'generator' ? 35 : 60,
+    fuelRemaining: mode === 'generator' ? '5 год 12 хв' : '9 год 4 хв',
     loadWatts: mains || mode === 'output-off' ? 0 : 16800,
     batteryWatts: mode === 'on' || mode === 'generator' ? -33200 : ['standby', 'output-off'].includes(mode) ? 0 : 17100,
     events: { appeared: { at: now - 3600000 }, disappeared: { at: now - 10800000 } } };

@@ -79,6 +79,8 @@ export function createHandler({ now = Date.now } = {}) {
       // If this run sent none, the previous ones are kept.
       // Fuel level in the tank, %: if this run sent none, the previous value is kept (like the indicators).
       snapshot.fuelPercent = snapshot.fuelPercent ?? old?.fuelPercent ?? null;
+      // How long the fuel will last (ready text from the sheet): the previous value is kept the same way.
+      snapshot.fuelRemaining = snapshot.fuelRemaining ?? old?.fuelRemaining ?? null;
       snapshot.indicators = parseIndicators(body.snapshot?.indicatorsHtml, body.snapshot?.indicatorsAt) ?? old?.indicators ?? null;
       if (shouldWriteSnapshot(previous, snapshot, now())) {
         try { await env.DATA.put(KV_SNAPSHOT, JSON.stringify({ snapshot, receivedAt: now() })); }
