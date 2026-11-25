@@ -100,12 +100,13 @@ function measurementDateLabel(timestamp, now = Date.now()) {
   const today = day(now);
   const yesterday = new Date(Date.parse(today + 'T12:00:00Z') - 86400000).toISOString().slice(0, 10);
   const measured = day(timestamp);
-  const label = measured === today ? 'сьогодні' : measured === yesterday ? 'вчора' :
+  // Today is not named: "Дані на 19:09"; other days: "Дані на вчора 22:51", "Дані на 19 жовтня 22:51".
+  const label = measured === today ? '' : measured === yesterday ? 'вчора' :
     new Intl.DateTimeFormat('uk-UA', {
       timeZone: 'Europe/Kyiv', day: 'numeric', month: 'long',
       ...(measured.slice(0, 4) !== today.slice(0, 4) ? { year: 'numeric' } : {})
     }).format(timestamp);
-  return 'Дані станом на ' + label + ' ' + clock.format(timestamp);
+  return 'Дані на ' + (label ? label + ' ' : '') + clock.format(timestamp);
 }
 function render(data, example = false) {
   displayedMeasurementTime = data.collectedAt ?? null;
@@ -338,6 +339,12 @@ setInterval(() => {
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && Date.now() - lastLoadedAt > 60000) refresh();
 });
+
+// The header stays at the top while the page scrolls; after a short scroll it becomes compact (see .header.compact in styles.css).
+const pageHeader = document.querySelector('.header');
+const markScrolled = () => pageHeader?.classList.toggle('compact', window.scrollY > 24);
+window.addEventListener('scroll', markScrolled, { passive: true });
+markScrolled();
 
 const installHelp = $('install-help');
 $('open-install-help').addEventListener('click', () => installHelp.showModal());

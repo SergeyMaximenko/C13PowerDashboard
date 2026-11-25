@@ -35,8 +35,8 @@ test('measurement label uses Kyiv today, yesterday and older dates', async () =>
     Intl, Date, clock: new Intl.DateTimeFormat('uk-UA', { timeZone: 'Europe/Kyiv', hour: '2-digit', minute: '2-digit' })
   });
   const now = Date.parse('2026-10-22T00:05:00+03:00');
-  assert.equal(label(Date.parse('2026-10-22T00:01:00+03:00'), now), 'Дані станом на сьогодні 00:01');
-  assert.equal(label(Date.parse('2026-10-21T22:51:00+03:00'), now), 'Дані станом на вчора 22:51');
+  assert.equal(label(Date.parse('2026-10-22T00:01:00+03:00'), now), 'Дані на 00:01');
+  assert.equal(label(Date.parse('2026-10-21T22:51:00+03:00'), now), 'Дані на вчора 22:51');
   assert.match(label(Date.parse('2026-10-19T22:51:00+03:00'), now), /19 жовтня 22:51/);
 });
 

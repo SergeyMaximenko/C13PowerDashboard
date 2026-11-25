@@ -17,6 +17,26 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
 svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
 .dashboard { max-width: 1328px; padding: 62px 48px 32px; margin: 0 auto; }
 .header { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 34px; }
+/* Sticky header: it stays at the top while scrolling; a blurred full-width strip appears behind it once the page is scrolled,
+   and the header becomes compact (smaller logo, no caption and subtitle) so it does not take the screen. */
+body { overflow-x: clip; }
+.header { position: sticky; top: 0; z-index: 30; padding: 8px 0; margin: -8px 0 26px; transition: padding .25s ease; }
+.header::before { content: ""; position: absolute; z-index: -1; top: 0; bottom: 0; left: calc(50% - 50vw); right: calc(50% - 50vw);
+  background: #f3f7facc; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border);
+  opacity: 0; transition: opacity .25s ease; pointer-events: none; }
+.header.compact::before { opacity: 1; }
+.header .brandmark, .header h1, .header .eyebrow, .header .subtitle { transition: all .25s ease; }
+.header.compact .eyebrow, .header.compact .subtitle { display: none; }
+.header.compact .brandmark { width: 44px; height: 50px; font-size: 22px; border-radius: 12px 12px 12px 4px; }
+.header.compact .brandmark span { font-size: 5px; letter-spacing: 1.4px; }
+.header.compact h1 { font-size: 24px; }
+.header.compact .identity { gap: 14px; }
+@media (max-width: 760px) {
+  .header.compact { flex-wrap: nowrap; gap: 10px; }
+  .header.compact .source-pill { display: none; }
+  .header.compact .header-actions { width: auto; margin-left: auto; }
+  .header.compact .icon-button { width: 38px; height: 38px; }
+}
 .identity { display: flex; align-items: center; gap: 22px; min-width: 0; }
 .brandmark { width: 68px; height: 78px; background: #16374b; border-radius: 18px 18px 18px 5px; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 750; font-size: 36px; letter-spacing: -2px; flex-shrink: 0; box-shadow: 0 6px 15px #18374910; }
 .brandmark span { font-size: 8px; font-weight: 600; letter-spacing: 2px; margin-left: 2px; }
@@ -28,7 +48,7 @@ svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width:
 .brandmark[data-state="gen"] { background-image: linear-gradient(135deg, #a8650a, #efae45, #a8650a); --glow: rgba(185, 119, 14, .8); }
 .brandmark[data-state="off"] { background-image: linear-gradient(135deg, #a82f3d, #e57985, #a82f3d); --glow: rgba(187, 57, 70, .75); }
 .brandmark[data-state="on"], .brandmark[data-state="gen"], .brandmark[data-state="off"] {
-  animation: brand-flow 5s ease-in-out infinite, brand-glow 3s ease-in-out infinite, brand-lamp 7s linear infinite; }
+  animation: brand-flow 5s ease-in-out infinite, brand-glow 3s ease-in-out infinite, brand-lamp 3s linear infinite; }
 @keyframes brand-flow { 0%, 100% { background-position: 0% 0%; } 50% { background-position: 100% 100%; } }
 @keyframes brand-glow {
   0%, 100% { box-shadow: 0 6px 15px #18374910, 0 0 0 0 transparent; }
@@ -38,29 +58,41 @@ svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width:
   background: linear-gradient(110deg, transparent 38%, rgba(255, 255, 255, .6) 50%, transparent 62%); background-size: 260% 100%; background-position: 160% 0; }
 .brandmark[data-state="on"]::after, .brandmark[data-state="gen"]::after, .brandmark[data-state="off"]::after { animation: brand-shine 4.5s ease-in-out infinite; }
 @keyframes brand-shine { 0% { background-position: 160% 0; } 45%, 100% { background-position: -60% 0; } }
-/* Every 7 seconds a bright spark runs once round the edge of the tile, and when it arrives the "13" flashes like a lamp. */
+/* Every 3 seconds a bright spark runs once round the edge of the tile, and when it arrives the "13" flashes like a lamp. */
 @property --brand-angle { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
 .brandmark::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 3px; pointer-events: none; opacity: 0;
   background: conic-gradient(from var(--brand-angle), transparent 0 72%, #fff 97%, transparent 100%);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
-.brandmark[data-state="on"]::before, .brandmark[data-state="gen"]::before, .brandmark[data-state="off"]::before { animation: brand-spark 7s linear infinite; }
+.brandmark[data-state="on"]::before, .brandmark[data-state="gen"]::before, .brandmark[data-state="off"]::before { animation: brand-spark 3s linear infinite; }
 @keyframes brand-spark {
   0% { --brand-angle: 0deg; opacity: 1; }
-  14% { --brand-angle: 360deg; opacity: 1; }
-  15%, 100% { --brand-angle: 360deg; opacity: 0; }
+  33% { --brand-angle: 360deg; opacity: 1; }
+  34%, 100% { --brand-angle: 360deg; opacity: 0; }
 }
 @keyframes brand-lamp {
-  0%, 12% { text-shadow: 0 0 0 transparent; }
-  16% { text-shadow: 0 0 6px #fff, 0 0 18px #fff, 0 0 30px #ffffffb0; }
-  20% { text-shadow: 0 0 3px #ffffff80; }
-  23% { text-shadow: 0 0 10px #fff, 0 0 22px #ffffffa0; }
-  30%, 100% { text-shadow: 0 0 0 transparent; }
-}
+  0%, 30% { text-shadow: 0 0 0 transparent; }
+  36% { text-shadow: 0 0 6px #fff, 0 0 18px #fff, 0 0 30px #ffffffb0; }
+  44% { text-shadow: 0 0 3px #ffffff80; }
+  50% { text-shadow: 0 0 10px #fff, 0 0 22px #ffffffa0; }
+  62%, 100% { text-shadow: 0 0 0 transparent; }
 }
 .eyebrow { margin: 0 0 7px; font-size: 10px; letter-spacing: 2.4px; font-weight: 700; color: #70869a; }
 h1 { font-size: clamp(27px, 3.4vw, 42px); line-height: 1.14; letter-spacing: -1.5px; margin: 0; font-weight: 750; overflow-wrap: anywhere; }
 .subtitle { margin: 7px 0 0; color: var(--muted); font-size: 17px; }
+/* Light header animation: a live dot before the small caption (its colour follows the logo state) and a soft light sweep over the title every few seconds. */
+.identity .eyebrow { display: flex; align-items: center; gap: 8px; }
+.identity .eyebrow::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #8a9aa8; flex-shrink: 0; }
+.brandmark[data-state="on"] + div .eyebrow::before { background: #2f7d62; animation: live-dot 2s ease-in-out infinite; }
+.brandmark[data-state="gen"] + div .eyebrow::before { background: #b9770e; animation: live-dot 2s ease-in-out infinite; }
+.brandmark[data-state="off"] + div .eyebrow::before { background: #bb3946; animation: live-dot 2s ease-in-out infinite; }
+@keyframes live-dot { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; transform: scale(1); } 50% { opacity: .45; transform: scale(.8); } }
+.identity h1 {
+  background: linear-gradient(100deg, #162c42 0 40%, #2b8bd6 46%, #7cc8f0 50%, #2b8bd6 54%, #162c42 60% 100%); background-size: 300% 100%; background-position: 100% 0;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+  animation: title-shine 2.8s ease-in-out infinite;
+}
+@keyframes title-shine { 0%, 12% { background-position: 100% 0; } 92%, 100% { background-position: 0% 0; } }
 .header-actions { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
 .source-pill { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; background: #e6edf3; padding: 9px 13px; border-radius: 30px; margin-right: 5px; white-space: nowrap; }
 .source-dot { width: 6px; height: 6px; border-radius: 100%; background: #637c92; }
