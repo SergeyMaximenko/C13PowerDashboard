@@ -158,6 +158,14 @@ function render(data, example = false) {
   $('generator-detail').textContent = generator === 'on' ? 'Напруга є'
     : generator === 'starting' ? 'Напруга є, інвертор його не використовує'
     : generatorKnown ? '' : 'Немає актуальних показників';
+  // Fuel in the tank (percent from the C# app): the tank fill follows the level, the colour shows how much is left.
+  const fuelPercent = !stale && Number.isFinite(data.fuelPercent) ? Math.min(100, Math.max(0, data.fuelPercent)) : null;
+  $('fuel').hidden = fuelPercent === null;
+  if (fuelPercent !== null) {
+    $('fuel').dataset.level = fuelPercent > 50 ? 'ok' : fuelPercent > 20 ? 'mid' : 'low';
+    $('fuel').style?.setProperty('--fuel', String(fuelPercent / 100));
+    $('fuel-pct').textContent = String(Math.round(fuelPercent));
+  }
   displayedGenerator = !stale && generatorKnown && Number.isFinite(data.generator?.startedAt)
     ? { state: generator, startedAt: data.generator.startedAt, stoppedAt: data.generator.stoppedAt ?? null } : null;
   updateGeneratorTimes();
@@ -231,6 +239,7 @@ function example(mode) {
       powerW: mode === 'generator' ? 22000 : 0, voltageV: mode === 'generator' || mode === 'generator-start' ? 235 : 0,
       startedAt: mode === 'generator' ? now - 2520000 : mode === 'generator-start' ? now - 120000 : now - 18000000,
       stoppedAt: mode === 'generator' || mode === 'generator-start' ? null : now - 11400000 },
+    fuelPercent: mode === 'generator' ? 35 : 60,
     loadWatts: mains || mode === 'output-off' ? 0 : 16800,
     batteryWatts: mode === 'on' || mode === 'generator' ? -33200 : ['standby', 'output-off'].includes(mode) ? 0 : 17100,
     events: { appeared: { at: now - 3600000 }, disappeared: { at: now - 10800000 } } };

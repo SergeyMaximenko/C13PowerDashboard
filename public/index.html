@@ -114,6 +114,17 @@
             <span id="generator-duration" class="grid-duration" hidden></span>
             <div class="load" id="generator-load" hidden><span class="secondary">Потужність</span><p><strong id="generator-power">—</strong><span id="generator-unit">кВт</span><span class="extra" id="generator-extra"></span></p></div>
             <p class="secondary" id="generator-detail">Очікуємо показники</p>
+            <div class="fuel" id="fuel" hidden>
+              <svg class="tank" viewBox="0 0 48 64" aria-hidden="true">
+                <defs><clipPath id="tank-clip"><rect x="5" y="14" width="38" height="44" rx="7"/></clipPath></defs>
+                <rect class="tank-bg" x="5" y="14" width="38" height="44" rx="7"/>
+                <g clip-path="url(#tank-clip)"><rect class="tank-fill" x="5" y="14" width="38" height="44"/></g>
+                <rect class="tank-frame" x="5" y="14" width="38" height="44" rx="7"/>
+                <path class="tank-frame" d="M19 14V8h10v6M17 8h14"/>
+                <path class="tank-mark" d="M5 25h6M5 36h6M5 47h6"/>
+              </svg>
+              <div><span class="secondary">Паливо в баці</span><p><strong id="fuel-pct">—</strong><span>%</span></p></div>
+            </div>
           </div>
         </article>
 

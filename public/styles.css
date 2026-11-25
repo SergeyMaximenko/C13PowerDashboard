@@ -308,6 +308,19 @@ dialog::backdrop { background: #14273e60; backdrop-filter: blur(5px); }
   line-height: 1.45; font-weight: 600; font-variant-numeric: tabular-nums;
 }
 
+/* Fuel tank in the generator card: the fill height follows --fuel (0..1), the colour follows data-level. */
+.fuel { --c: var(--green); display: flex; align-items: center; gap: 14px; margin-top: 14px; padding-top: 14px; border-top: 1px solid #dce9e3; }
+.fuel[data-level="mid"] { --c: var(--amber); }
+.fuel[data-level="low"] { --c: var(--red); }
+.fuel .tank { width: 44px; height: 59px; stroke: none; stroke-width: 0; overflow: visible; }
+.tank-bg { fill: #e7edf3; }
+.tank-fill { fill: var(--c); opacity: .92; transform-box: fill-box; transform-origin: 50% 100%; transform: scaleY(var(--fuel, 0)); transition: transform .6s ease; }
+.tank-frame { fill: none; stroke: #5f7a92; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tank-mark { fill: none; stroke: #5f7a92; stroke-width: 1.5; opacity: .7; }
+.fuel p { margin: 2px 0 0; display: flex; align-items: baseline; gap: 3px; }
+.fuel strong { font-size: 32px; letter-spacing: -1px; font-weight: 700; color: var(--c); font-variant-numeric: tabular-nums; }
+.fuel p > span { font-size: 18px; color: var(--c); }
+
 /* ---------- Tabs: Стан / Паливо та ТО / Журнал ---------- */
 .tabs { display: inline-flex; gap: 4px; padding: 5px; margin: -9px 0 26px; background: #e6edf3; border-radius: 30px; max-width: 100%; }
 .tabs button { padding: 10px 22px; border: 0; border-radius: 24px; background: transparent; color: #4d6478; font-size: 14px; font-weight: 650; white-space: nowrap; }
