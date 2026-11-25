@@ -54,6 +54,22 @@ function measurementAge(timestamp, now = Date.now()) {
   // Zero parts are skipped ("3 год. 27 с.", not "3 год. 0 хв. 27 с.").
   return 'Пройшло ' + (hours ? hours + ' год. ' : '') + (minutes ? minutes + ' хв. ' : '') + seconds % 60 + ' с.';
 }
+// Тривалість події для рамки: <1 год "34 хв. 35 с.", <1 доби "5 год. 34 хв.", від доби "4 дні 3 год.", від 10 діб "12 днів".
+function dayWord(n) {
+  const last = n % 10, two = n % 100;
+  return n + (last === 1 && two !== 11 ? ' день' : last >= 2 && last <= 4 && (two < 12 || two > 14) ? ' дні' : ' днів');
+}
+function eventAge(timestamp, now = Date.now()) {
+  if (!Number.isFinite(timestamp) || timestamp <= 0 || timestamp > now) return '';
+  const total = Math.floor((now - timestamp) / 1000);
+  const days = Math.floor(total / 86400);
+  const hours = Math.floor(total / 3600) % 24;
+  const minutes = Math.floor(total / 60) % 60;
+  if (days >= 10) return dayWord(days);
+  if (days >= 1) return dayWord(days) + (hours ? ' ' + hours + ' год.' : '');
+  if (hours) return hours + ' год.' + (minutes ? ' ' + minutes + ' хв.' : '');
+  return (minutes ? minutes + ' хв. ' : '') + total % 60 + ' с.';
+}
 function updateMeasurementAge() {
   const element = $('data-elapsed');
   element.textContent = measurementAge(displayedMeasurementTime);
@@ -69,7 +85,7 @@ function updateGridDuration() {
     Number.isFinite(event.measuredAt) && now >= event.measuredAt && now - event.measuredAt <= STALE_AFTER_MS;
   badge.hidden = !valid;
   // Shown after the "З 15:23" part in one line; the headline ("Є" / "Немає") says what the time is about.
-  badge.textContent = valid ? measurementAge(event.at, now).replace(/^Пройшло /, '') : '';
+  badge.textContent = valid ? eventAge(event.at, now) : '';
   if (!valid) $('grid-event').hidden = true;
 }
 // Last generator run: "Запущено", "Зупинено" and how long it ran (still running: how long it has been running).
@@ -82,7 +98,7 @@ function updateGeneratorTimes() {
   const now = Date.now();
   const stamp = value => (date.format(value) !== date.format(now) ? date.format(value) + ', ' : '') + clock.format(value);
   // Same live counter as the mains badge: hours, minutes and seconds.
-  const age = value => measurementAge(value, now).replace(/^Пройшло /, '');
+  const age = value => eventAge(value, now);
   if (run.state === 'off' && !run.stoppedAt) { box.hidden = badge.hidden = true; return; }
   const stopped = run.state === 'off';
   // One line "З 15:25 · 1 год. 7 хв. 19 с.": the headline ("Зупинений" / "Працює") says what the time is about.
