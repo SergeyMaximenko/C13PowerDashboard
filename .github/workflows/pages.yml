@@ -21,7 +21,7 @@ jobs:
       id-token: write
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url || steps.deployment2.outputs.page_url || steps.deployment3.outputs.page_url }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v4
@@ -42,6 +42,25 @@ jobs:
       - uses: actions/upload-pages-artifact@v4
         with:
           path: dist
+      # GitHub іноді не одразу показує щойно завантажений артефакт, і Publish падає з «No artifacts named github-pages»,
+      # хоча артефакт у запуску є. Тому до трьох спроб: перша одразу, далі після паузи (20 с, 45 с). Якщо перша пройшла,
+      # паузи немає.
       - name: Publish
         id: deployment
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+      - name: Pause before retry 1
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 20
+      - name: Publish (retry 1)
+        id: deployment2
+        if: steps.deployment.outcome == 'failure'
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+      - name: Pause before retry 2
+        if: steps.deployment.outcome == 'failure' && steps.deployment2.outcome == 'failure'
+        run: sleep 45
+      - name: Publish (retry 2)
+        id: deployment3
+        if: steps.deployment.outcome == 'failure' && steps.deployment2.outcome == 'failure'
         uses: actions/deploy-pages@v4
