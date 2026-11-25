@@ -7,7 +7,7 @@
 Дашборд «Чавдар 13» показує: чи є мережа на вході інвертора, чи працює інвертор (схема з АВР, пріоритет у мережі), заряд і режим батареї, стан генератора, приблизний час появи/зникнення мережі. Окрема сторінка — звіт про роботу генератора й заправки.
 
 ```
-Deye Cloud  → ScheduleDisconnectLight (C#, GitHub Actions ~кожні 2 хв)
+Deye Cloud    → ScheduleDisconnectLight (C#, GitHub Actions ~кожні 2 хв)
               ├─ Google Sheet: DeyeСтатус (поточний стан), DeyeСтатистика (журнал), ЗаправкаСтатистика
               └─ POST /api/ingest* → Cloudflare Worker `c13-power` (KV `DATA`) → сторінка (GitHub Pages)
 ```
