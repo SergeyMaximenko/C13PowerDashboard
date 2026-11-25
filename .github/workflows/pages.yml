@@ -1,6 +1,7 @@
 name: Publish dashboard
 # Сторінка читає дані з Cloudflare Worker, секрети тут не потрібні.
 # Публікація запускається після кожного push у main і вручну (Run workflow).
+# Якщо крок Publish впав із «No artifacts named github-pages», а артефакт у запуску є, це збій GitHub: повторити запуск.
 on:
   workflow_dispatch:
   push:
