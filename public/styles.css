@@ -6,7 +6,7 @@
 
 
 * { box-sizing: border-box; }
-body { margin: 0; min-width: 280px; background: radial-gradient(ellipse at 5% 5%, #e7f1f9 0, transparent 50%), #f3f7fa; min-height: 100dvh; }
+body { margin: 0; min-width: 280px; background: radial-gradient(ellipse at 5% 5%, #e7f1f9 0, transparent 50%), #f3f7fa; background-attachment: fixed; min-height: 100dvh; }
 button, input, select { font: inherit; }
 button, select { cursor: pointer; }
 button { -webkit-tap-highlight-color: transparent; }
@@ -17,28 +17,22 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
 svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
 .dashboard { max-width: 1328px; padding: 62px 48px 32px; margin: 0 auto; }
 .header { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 34px; }
-/* Sticky header: it stays at the top while scrolling; a blurred full-width strip appears behind it once the page is scrolled,
-   and the header becomes compact (smaller logo, no caption and subtitle) so it does not take the screen. */
-/* overflow-anchor: the browser must not shift the scroll position when the header changes its height (that caused the flicker). */
+/* Fixed top block: the header and the tabs stay at the top of the screen while the page scrolls. Its size never changes
+   (no shrinking), so nothing jumps. A blurred full-width strip sits behind it. */
 html, body { overflow-anchor: none; }
 body { overflow-x: clip; }
-.header { position: sticky; top: 0; z-index: 30; padding: 8px 0; margin: -8px 0 26px; transition: padding .25s ease; }
-.header::before { content: ""; position: absolute; z-index: -1; top: 0; bottom: 0; left: calc(50% - 50vw); right: calc(50% - 50vw);
-  background: #f3f7facc; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border);
-  opacity: 0; transition: opacity .25s ease; pointer-events: none; }
-.header.compact::before { opacity: 1; }
-.header .brandmark, .header h1, .header .eyebrow, .header .subtitle { transition: all .25s ease; }
-.header.compact .eyebrow, .header.compact .subtitle { display: none; }
-.header.compact .brandmark { width: 44px; height: 50px; font-size: 22px; border-radius: 12px 12px 12px 4px; }
-.header.compact .brandmark span { font-size: 5px; letter-spacing: 1.4px; }
-.header.compact h1 { font-size: 24px; }
-.header.compact .identity { gap: 14px; }
-@media (max-width: 760px) {
-  .header.compact { flex-wrap: nowrap; gap: 10px; }
-  .header.compact .source-pill { display: none; }
-  .header.compact .header-actions { width: auto; margin-left: auto; }
-  .header.compact .icon-button { width: 38px; height: 38px; }
-}
+/* The page has no top padding of its own: the block sits at the very top from the start, so it never moves while scrolling. */
+main.dashboard { padding-top: 0; }
+.top-fixed { position: sticky; top: 0; z-index: 30; padding: 26px 0 10px; margin: 0 0 6px; }
+@media (max-width: 760px) { .top-fixed { padding-top: 16px; } }
+.top-fixed::before { content: ""; position: absolute; z-index: -1; top: 0; bottom: 0; left: calc(50% - 50vw); right: calc(50% - 50vw);
+  /* The same background as the page (the gradient is fixed to the screen for both), so the strip and the page are one colour. */
+  background: radial-gradient(ellipse at 5% 5%, #e7f1f9 0, transparent 50%), #f3f7fa; background-attachment: fixed; pointer-events: none; }
+.top-fixed .header { margin: 0 0 16px; padding: 0; flex-wrap: nowrap; align-items: center; gap: 14px; }
+.top-fixed .identity > div { margin-top: -6px; }
+.top-fixed .header-actions { width: auto; margin-left: auto; }
+.top-fixed .header-actions .icon-button { margin-left: 0; }
+.top-fixed .tabs { margin: 0; }
 .identity { display: flex; align-items: center; gap: 22px; min-width: 0; }
 .brandmark { width: 68px; height: 78px; background: #16374b; border-radius: 18px 18px 18px 5px; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 750; font-size: 36px; letter-spacing: -2px; flex-shrink: 0; box-shadow: 0 6px 15px #18374910; }
 .brandmark span { font-size: 8px; font-weight: 600; letter-spacing: 2px; margin-left: 2px; }
@@ -82,13 +76,7 @@ body { overflow-x: clip; }
 .eyebrow { margin: 0 0 7px; font-size: 10px; letter-spacing: 2.4px; font-weight: 700; color: #70869a; }
 h1 { font-size: clamp(27px, 3.4vw, 42px); line-height: 1.14; letter-spacing: -1.5px; margin: 0; font-weight: 750; overflow-wrap: anywhere; }
 .subtitle { margin: 7px 0 0; color: var(--muted); font-size: 17px; }
-/* Light header animation: a live dot before the small caption (its colour follows the logo state) and a soft light sweep over the title every few seconds. */
-.identity .eyebrow { display: flex; align-items: center; gap: 8px; }
-.identity .eyebrow::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #8a9aa8; flex-shrink: 0; }
-.brandmark[data-state="on"] + div .eyebrow::before { background: #2f7d62; animation: live-dot 2s ease-in-out infinite; }
-.brandmark[data-state="gen"] + div .eyebrow::before { background: #b9770e; animation: live-dot 2s ease-in-out infinite; }
-.brandmark[data-state="off"] + div .eyebrow::before { background: #bb3946; animation: live-dot 2s ease-in-out infinite; }
-@keyframes live-dot { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; transform: scale(1); } 50% { opacity: .45; transform: scale(.8); } }
+/* Light header animation: a soft light sweep over the title every few seconds. */
 .identity h1 {
   background: linear-gradient(100deg, #162c42 0 40%, var(--shine, #2b8bd6) 46%, var(--shine-core, #7cc8f0) 50%, var(--shine, #2b8bd6) 54%, #162c42 60% 100%); background-size: 300% 100%; background-position: 100% 0;
   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;

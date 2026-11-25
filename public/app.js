@@ -340,20 +340,6 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden && Date.now() - lastLoadedAt > 60000) refresh();
 });
 
-// The header stays at the top while the page scrolls; after a short scroll it becomes compact (see .header.compact in styles.css).
-const pageHeader = document.querySelector('.header');
-// Two thresholds (hysteresis): compact after 60 px, back to full only near the very top (8 px). One threshold made the header
-// flicker: it got lower, the page jumped, the scroll position fell under the threshold and the header grew back, and so on.
-let headerCompact = false;
-const markScrolled = () => {
-  const y = window.scrollY;
-  if (!headerCompact && y > 60) headerCompact = true;
-  else if (headerCompact && y < 8) headerCompact = false;
-  else return;
-  pageHeader?.classList.toggle('compact', headerCompact);
-};
-window.addEventListener('scroll', markScrolled, { passive: true });
-markScrolled();
 
 const installHelp = $('install-help');
 $('open-install-help').addEventListener('click', () => installHelp.showModal());

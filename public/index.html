@@ -37,20 +37,26 @@
   </svg>
 
   <main class="dashboard">
+    <div class="top-fixed" id="top-fixed">
     <header class="header">
       <div class="identity">
         <div class="brandmark" id="brandmark" data-state="unknown" aria-hidden="true">13<span>POWER</span></div>
         <div>
-          <p class="eyebrow">C13 POWER DASHBOARD</p>
           <h1 id="station-name">Чавдар 13</h1>
           <p class="subtitle">Електроживлення будинку</p>
         </div>
       </div>
       <div class="header-actions">
-        <span class="source-pill" id="source-pill"><span class="source-dot"></span><span id="source-text">Deye Cloud</span></span>
+        <span class="source-pill" id="source-pill" hidden><span class="source-dot"></span><span id="source-text">Deye Cloud</span></span>
         <button class="icon-button" id="refresh" title="Оновити дані" aria-label="Оновити дані"><svg><use href="#i-refresh"/></svg></button>
       </div>
     </header>
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Розділи">
+      <button type="button" role="tab" data-tab="state" aria-selected="true">Стан</button>
+      <button type="button" role="tab" data-tab="fuel" aria-selected="false">Паливо та ТО</button>
+      <button type="button" role="tab" data-tab="generator" aria-selected="false">Генератор</button>
+    </nav>
+    </div>
 
 
     
@@ -59,11 +65,6 @@
       <p>Ведуться технічні роботи. Будь ласка, зайдіть пізніше.</p>
     </section>
 
-    <nav class="tabs" id="tabs" role="tablist" aria-label="Розділи">
-      <button type="button" role="tab" data-tab="state" aria-selected="true">Стан</button>
-      <button type="button" role="tab" data-tab="fuel" aria-selected="false">Паливо та ТО</button>
-      <button type="button" role="tab" data-tab="generator" aria-selected="false">Генератор</button>
-    </nav>
 
     <div class="pane" data-pane="state">
       <section class="freshness" aria-label="Час даних">
