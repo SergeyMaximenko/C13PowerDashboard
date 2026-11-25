@@ -160,7 +160,9 @@ progress::-webkit-progress-bar { background: #dcece5; border-radius: 5px; }
 progress::-webkit-progress-value { background: var(--accent); border-radius: 5px; }
 progress::-moz-progress-bar { background: var(--accent); border-radius: 5px; }
 .battery-mode { margin: 12px 0 0; color: var(--accent); font-size: 17px; font-weight: 750; }
-.battery-value { margin-top: 4px; }
+.battery-value { margin-top: 4px; margin-bottom: 14px; }
+/* The charge bar sits right under the percent. The other cards push their bottom block to the card's lower edge (margin-top: auto), and a tall neighbour made the bar drift away from the number. */
+.battery-card .card-bottom { margin-top: 0; min-height: 0; }
 .controls { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 25px; font-size: 12px; color: #738698; }
 .controls label { display: flex; align-items: center; gap: 10px; }
 .controls select { border: 1px solid #dce5ed; background: #fff9; color: #516b80; border-radius: 9px; font-size: 12px; padding: 9px 28px 9px 11px; min-height: 40px; max-width: 100%; }
