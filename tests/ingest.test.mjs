@@ -173,4 +173,8 @@ test('ingest: fuelRemaining text is validated, published and kept when a run sen
   time += 120000; // markup is rejected, the previous text stays
   await handle(post('/api/ingest', { schemaVersion: 1, snapshot: { ...snapshot, measuredAt: time - 1000, fuelRemaining: '<b>x</b>' } }), e);
   assert.equal((await status()).fuelRemaining, '9 год 4 хв');
+
+  time += 120000; // an empty string (empty cell) clears it
+  await handle(post('/api/ingest', { schemaVersion: 1, snapshot: { ...snapshot, measuredAt: time - 1000, fuelRemaining: '' } }), e);
+  assert.equal((await status()).fuelRemaining, null);
 });
