@@ -163,10 +163,15 @@ h2 { font-size: 20px; line-height: 1.25; font-weight: 650; letter-spacing: -.4px
 .card-bottom .load { margin-top: 6px; }
 .battery-value { margin-bottom: 23px; font-size: 64px; font-variant-numeric: tabular-nums; }
 .percent { font-size: 40px; margin-left: 4px; font-weight: 550; }
-progress { display: block; width: 100%; height: 7px; appearance: none; border: 0; border-radius: 5px; overflow: hidden; background: #dcece5; margin-bottom: 13px; }
-progress::-webkit-progress-bar { background: #dcece5; border-radius: 5px; }
-progress::-webkit-progress-value { background: var(--accent); border-radius: 5px; }
-progress::-moz-progress-bar { background: var(--accent); border-radius: 5px; }
+/* Segmented gauges (battery charge, fuel): ten blocks of 10%, the last one is filled partially. The gaps are cut with a mask. */
+progress, .fuel-bar {
+  -webkit-mask: repeating-linear-gradient(90deg, #000 0, #000 calc(10% - 4px), transparent calc(10% - 4px), transparent 10%);
+  mask: repeating-linear-gradient(90deg, #000 0, #000 calc(10% - 4px), transparent calc(10% - 4px), transparent 10%);
+}
+progress { display: block; width: 100%; height: 12px; appearance: none; border: 0; border-radius: 2px; overflow: hidden; background: #dcece5; margin-bottom: 13px; }
+progress::-webkit-progress-bar { background: #dcece5; border-radius: 0; }
+progress::-webkit-progress-value { background: var(--accent); border-radius: 0; }
+progress::-moz-progress-bar { background: var(--accent); border-radius: 0; }
 .battery-mode { margin: 12px 0 0; color: var(--accent); font-size: 17px; font-weight: 750; }
 .battery-value { margin-top: 4px; margin-bottom: 14px; }
 /* The charge bar sits right under the percent. The other cards push their bottom block to the card's lower edge (margin-top: auto), and a tall neighbour made the bar drift away from the number. */
@@ -327,8 +332,8 @@ dialog::backdrop { background: #14273e60; backdrop-filter: blur(5px); }
 .fuel-head p { margin: 0; display: flex; align-items: baseline; gap: 3px; }
 .fuel-head strong { font-size: 32px; letter-spacing: -1px; font-weight: 700; color: var(--c); font-variant-numeric: tabular-nums; }
 .fuel-head p > span { font-size: 18px; color: var(--c); }
-.fuel-bar { height: 8px; border-radius: 5px; background: #dcece5; overflow: hidden; margin-top: 6px; }
-.fuel-bar i { display: block; height: 100%; width: calc(var(--fuel, 0) * 100%); background: var(--c); border-radius: 5px; transition: width .6s ease; }
+.fuel-bar { height: 12px; border-radius: 2px; background: #dcece5; overflow: hidden; margin-top: 8px; }
+.fuel-bar i { display: block; height: 100%; width: calc(var(--fuel, 0) * 100%); background: var(--c); transition: width .6s ease; }
 .fuel-left { margin: 9px 0 0; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 13px; color: var(--muted); }
 .fuel-left[hidden] { display: none; }
 .fuel-left b { font-size: 14px; font-weight: 700; color: var(--ink, #162c42); white-space: nowrap; }
