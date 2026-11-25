@@ -42,9 +42,6 @@ jobs:
       - uses: actions/upload-pages-artifact@v4
         with:
           path: dist
-      # GitHub іноді не одразу показує щойно завантажений артефакт, і Publish падає з «No artifacts named github-pages».
-      - name: Wait for artifact
-        run: sleep 20
       - name: Publish
         id: deployment
         uses: actions/deploy-pages@v4
