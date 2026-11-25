@@ -77,6 +77,8 @@ export function createHandler({ now = Date.now } = {}) {
       const old = previous?.snapshot;
       // Indicators (generator text) travel inside the snapshot and are saved in the same KV key (one write per run).
       // If this run sent none, the previous ones are kept.
+      // Fuel level in the tank, %: if this run sent none, the previous value is kept (like the indicators).
+      snapshot.fuelPercent = snapshot.fuelPercent ?? old?.fuelPercent ?? null;
       snapshot.indicators = parseIndicators(body.snapshot?.indicatorsHtml, body.snapshot?.indicatorsAt) ?? old?.indicators ?? null;
       if (shouldWriteSnapshot(previous, snapshot, now())) {
         try { await env.DATA.put(KV_SNAPSHOT, JSON.stringify({ snapshot, receivedAt: now() })); }

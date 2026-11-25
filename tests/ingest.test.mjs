@@ -134,3 +134,25 @@ test('ingest: KV write limit gives a clear KV_LIMIT error (503), other write err
   assert.equal(res.status, 503);
   assert.equal((await res.json()).error, 'KV_WRITE_FAILED');
 });
+
+test('ingest: fuelPercent is validated, published in /api/status and kept when a run sends none', async () => {
+  let time = NOW;
+  const handle = createHandler({ now: () => time });
+  const e = env();
+  const status = async () => (await handle(new Request('https://x/api/status'), e)).json();
+
+  await handle(post('/api/ingest', { schemaVersion: 1, snapshot: { ...snapshot, fuelPercent: 60 } }), e);
+  assert.equal((await status()).fuelPercent, 60);
+
+  time += 120000; // a new measurement with no fuelPercent: the previous value stays
+  await handle(post('/api/ingest', { schemaVersion: 1, snapshot: { ...snapshot, measuredAt: time - 1000 } }), e);
+  assert.equal((await status()).fuelPercent, 60);
+
+  time += 120000; // out of range is dropped (null), the previous value stays
+  await handle(post('/api/ingest', { schemaVersion: 1, snapshot: { ...snapshot, measuredAt: time - 1000, fuelPercent: 150 } }), e);
+  assert.equal((await status()).fuelPercent, 60);
+
+  time += 120000; // a new valid value replaces it
+  await handle(post('/api/ingest', { schemaVersion: 1, snapshot: { ...snapshot, measuredAt: time - 1000, fuelPercent: 45 } }), e);
+  assert.equal((await status()).fuelPercent, 45);
+});
