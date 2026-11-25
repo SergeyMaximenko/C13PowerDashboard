@@ -19,6 +19,8 @@ svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width:
 .header { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 34px; }
 /* Sticky header: it stays at the top while scrolling; a blurred full-width strip appears behind it once the page is scrolled,
    and the header becomes compact (smaller logo, no caption and subtitle) so it does not take the screen. */
+/* overflow-anchor: the browser must not shift the scroll position when the header changes its height (that caused the flicker). */
+html, body { overflow-anchor: none; }
 body { overflow-x: clip; }
 .header { position: sticky; top: 0; z-index: 30; padding: 8px 0; margin: -8px 0 26px; transition: padding .25s ease; }
 .header::before { content: ""; position: absolute; z-index: -1; top: 0; bottom: 0; left: calc(50% - 50vw); right: calc(50% - 50vw);
@@ -88,10 +90,14 @@ h1 { font-size: clamp(27px, 3.4vw, 42px); line-height: 1.14; letter-spacing: -1.
 .brandmark[data-state="off"] + div .eyebrow::before { background: #bb3946; animation: live-dot 2s ease-in-out infinite; }
 @keyframes live-dot { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; transform: scale(1); } 50% { opacity: .45; transform: scale(.8); } }
 .identity h1 {
-  background: linear-gradient(100deg, #162c42 0 40%, #2b8bd6 46%, #7cc8f0 50%, #2b8bd6 54%, #162c42 60% 100%); background-size: 300% 100%; background-position: 100% 0;
+  background: linear-gradient(100deg, #162c42 0 40%, var(--shine, #2b8bd6) 46%, var(--shine-core, #7cc8f0) 50%, var(--shine, #2b8bd6) 54%, #162c42 60% 100%); background-size: 300% 100%; background-position: 100% 0;
   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
   animation: title-shine 2.8s ease-in-out infinite;
 }
+/* The light sweeping over the title takes the colour of the state (same as the logo): green, amber, red; blue while unknown. */
+.brandmark[data-state="on"] + div h1 { --shine: #1f9d6e; --shine-core: #7ee6bd; }
+.brandmark[data-state="gen"] + div h1 { --shine: #d98a0b; --shine-core: #ffd27a; }
+.brandmark[data-state="off"] + div h1 { --shine: #d0394a; --shine-core: #ff9aa5; }
 @keyframes title-shine { 0%, 12% { background-position: 100% 0; } 92%, 100% { background-position: 0% 0; } }
 .header-actions { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
 .source-pill { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; background: #e6edf3; padding: 9px 13px; border-radius: 30px; margin-right: 5px; white-space: nowrap; }
