@@ -23,16 +23,11 @@ html, body { overflow-anchor: none; }
 body { overflow-x: clip; }
 /* The page has no top padding of its own: the block sits at the very top from the start, so it never moves while scrolling. */
 main.dashboard { padding-top: 0; }
-.top-fixed { position: sticky; position: -webkit-sticky; top: 0; z-index: 30; padding: 26px 0 10px; margin: 0 0 6px;
-  /* Непрозорий фон і на самому блоці: у вбудованих браузерах (Telegram) фон псевдоелемента з fixed може не малюватися, і текст просвічує. */
-  background-color: #f3f7fa; }
+.top-fixed { position: sticky; top: 0; z-index: 30; padding: 26px 0 10px; margin: 0 0 6px; }
 @media (max-width: 760px) { .top-fixed { padding-top: 16px; } }
 .top-fixed::before { content: ""; position: absolute; z-index: -1; top: 0; bottom: 0; left: calc(50% - 50vw); right: calc(50% - 50vw);
   /* The same background as the page (the gradient is fixed to the screen for both), so the strip and the page are one colour. */
-  background: radial-gradient(ellipse at 5% 5%, #e7f1f9 0, transparent 50%), #f3f7fa; background-attachment: fixed; pointer-events: none; }
-/* Де background-attachment: fixed не підтримується (iOS, вбудовані браузери), смуга лишається суцільною. */
-@supports (-webkit-touch-callout: none) { .top-fixed::before { background: #f3f7fa; } }
-.top-fixed .header { margin: 0 0 16px; padding: 0; flex-wrap: nowrap; align-items: center; gap: 14px; }
+  background: radial-gradient(ellipse at 5% 5%, #e7f1f9 0, transparent 50%), #f3f7fa; background-attachment: fixed; pointer-events: none; }.top-fixed .header { margin: 0 0 16px; padding: 0; flex-wrap: nowrap; align-items: center; gap: 14px; }
 .top-fixed .identity > div { margin-top: -6px; }
 .top-fixed .header-actions { width: auto; margin-left: auto; }
 .top-fixed .header-actions .icon-button { margin-left: 0; }
