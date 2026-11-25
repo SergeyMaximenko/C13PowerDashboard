@@ -51,7 +51,8 @@ function measurementAge(timestamp, now = Date.now()) {
   const seconds = Math.floor((now - timestamp) / 1000);
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor(seconds / 60) % 60;
-  return 'Пройшло ' + (hours ? hours + ' год. ' : '') + minutes + ' хв. ' + seconds % 60 + ' с.';
+  // Zero parts are skipped ("3 год. 27 с.", not "3 год. 0 хв. 27 с.").
+  return 'Пройшло ' + (hours ? hours + ' год. ' : '') + (minutes ? minutes + ' хв. ' : '') + seconds % 60 + ' с.';
 }
 function updateMeasurementAge() {
   const element = $('data-elapsed');
@@ -67,8 +68,8 @@ function updateGridDuration() {
   const valid = event && Number.isFinite(event.at) && event.at > 0 && event.at <= event.measuredAt &&
     Number.isFinite(event.measuredAt) && now >= event.measuredAt && now - event.measuredAt <= STALE_AFTER_MS;
   badge.hidden = !valid;
-  badge.textContent = valid ? (event.grid === 'on' ? 'Є вже ≈ ' : 'Немає вже ≈ ') +
-    measurementAge(event.at, now).replace(/^Пройшло /, '') : '';
+  // Shown after the "З 15:23" part in one line; the headline ("Є" / "Немає") says what the time is about.
+  badge.textContent = valid ? measurementAge(event.at, now).replace(/^Пройшло /, '') : '';
   if (!valid) $('grid-event').hidden = true;
 }
 // Last generator run: "Запущено", "Зупинено" and how long it ran (still running: how long it has been running).
@@ -84,8 +85,9 @@ function updateGeneratorTimes() {
   const age = value => measurementAge(value, now).replace(/^Пройшло /, '');
   if (run.state === 'off' && !run.stoppedAt) { box.hidden = badge.hidden = true; return; }
   const stopped = run.state === 'off';
-  box.textContent = stopped ? 'Зупинено ≈ ' + stamp(run.stoppedAt) : 'Запустився ≈ ' + stamp(run.startedAt);
-  badge.textContent = stopped ? 'Відпочиває ≈ ' + age(run.stoppedAt) : 'Працює ≈ ' + age(run.startedAt);
+  // One line "З 15:25 · 1 год. 7 хв. 19 с.": the headline ("Зупинений" / "Працює") says what the time is about.
+  box.textContent = 'з ' + stamp(stopped ? run.stoppedAt : run.startedAt);
+  badge.textContent = age(stopped ? run.stoppedAt : run.startedAt);
 }
 function measurementDateLabel(timestamp, now = Date.now()) {
   const calendar = new Intl.DateTimeFormat('en-CA', {
@@ -132,7 +134,7 @@ function render(data, example = false) {
   // The event time is the exact time the C# app recorded (the status date in the sheet), shown as is, without any shift.
   const eventAt = event ? event.at : null;
   $('grid-event').hidden = !event;
-  $('grid-event').textContent = event ? (grid === 'on' ? 'З’явилася ≈ ' : 'Зникла ≈ ') +
+  $('grid-event').textContent = event ? 'з ' +
     (date.format(eventAt) !== date.format(data.collectedAt) ? date.format(eventAt) + ', ' : '') + clock.format(Math.floor(eventAt / 60000) * 60000) : '';
   displayedGridEvent = event && !stale ? { at: eventAt, measuredAt: data.collectedAt, grid } : null;
   updateGridDuration();
@@ -156,7 +158,7 @@ function render(data, example = false) {
   $('generator-extra').textContent = Number.isFinite(data.generator?.voltageV) && data.generator.voltageV > 0 ? '· ' + Math.round(data.generator.voltageV) + ' В' : '';
   $('generator-detail').hidden = generator === 'on' || (generatorKnown && generator === 'off'); // power and voltage are in the metric row; a stopped generator needs no extra line
   $('generator-detail').textContent = generator === 'on' ? 'Напруга є'
-    : generator === 'starting' ? 'Напруга є, інвертор його не використовує'
+    : generator === 'starting' ? 'Будинок поки живиться не від генератора'
     : generatorKnown ? '' : 'Немає актуальних показників';
   // Fuel in the tank (percent from the C# app): the tank fill follows the level, the colour shows how much is left.
   const fuelPercent = !stale && Number.isFinite(data.fuelPercent) ? Math.min(100, Math.max(0, data.fuelPercent)) : null;
@@ -165,10 +167,10 @@ function render(data, example = false) {
     $('fuel').dataset.level = fuelPercent > 50 ? 'ok' : fuelPercent > 20 ? 'mid' : 'low';
     $('fuel').style?.setProperty('--fuel', String(fuelPercent / 100));
     $('fuel-pct').textContent = String(Math.round(fuelPercent));
-    // Ready "lasts for" text from the sheet: a framed line "вистачить ≈ 5 год 10 хв" under the label; hidden when there is none.
+    // Ready "lasts for" text from the sheet: a row "Вистачить приблизно на 5 год 10 хв" under the bar; hidden when there is none.
     const remaining = typeof data.fuelRemaining === 'string' ? data.fuelRemaining.trim() : '';
     $('fuel-left').hidden = !remaining;
-    if (remaining) $('fuel-left').textContent = 'вистачить ≈ ' + remaining;
+    $('fuel-left-time').textContent = remaining;
   }
   displayedGenerator = !stale && generatorKnown && Number.isFinite(data.generator?.startedAt)
     ? { state: generator, startedAt: data.generator.startedAt, stoppedAt: data.generator.stoppedAt ?? null } : null;
@@ -177,8 +179,8 @@ function render(data, example = false) {
   $('output-card').dataset.state = ({ supplying: 'on', charging: 'on', standby: 'standby', off: 'off', unknown: 'unknown' })[operation];
   $('output-value').textContent = ({
     supplying: generator === 'on' ? 'Будинок живиться від генератора' : 'Будинок живиться від батареї',
-    charging: 'Інвертор заряджає акумулятор',
-    standby: 'Інвертор у режимі очікування',
+    charging: 'Заряджає батарею',
+    standby: 'Очікування',
     off: 'Немає напруги на виході',
     unknown: 'Стан невідомий'
   })[operation];
@@ -191,10 +193,14 @@ function render(data, example = false) {
   $('load-value').textContent = watts == null ? '—' :
     watts > 0 && watts < 1 ? '< 1' : decimal.format(watts < 1000 ? watts : watts / 1000);
   $('load-unit').textContent = watts != null && watts < 1000 ? 'Вт' : 'кВт';
+  // With mains present the short headline ("Очікування", "Заряджає батарею") gets one line saying who feeds the house.
+  // While the inverter feeds the house the headline already says it, so there is no extra line.
   // The headline already says "Немає напруги на виході": do not repeat it below.
-  $('output-detail').hidden = operation === 'off' || (output === 'on' && data.loadWatts != null);
-  $('output-detail').textContent = output === 'on' ? 'Напруга на виході є' : output === 'off' ? 'Напруги на виході немає' :
-    output === 'unstable' ? 'Показники напруги нестабільні' : 'Недостатньо актуальних показників';
+  const mainsFeeds = (operation === 'standby' || operation === 'charging') && grid === 'on';
+  const sourceLine = mainsFeeds ? 'Будинок живиться від мережі' : '';
+  $('output-detail').hidden = operation === 'off' || (!sourceLine && output === 'on' && data.loadWatts != null);
+  $('output-detail').textContent = sourceLine || (output === 'on' ? 'Напруга на виході є' : output === 'off' ? 'Напруги на виході немає' :
+    output === 'unstable' ? 'Показники напруги нестабільні' : 'Недостатньо актуальних показників');
   // Amber while the battery is discharging (red below 20%, as a warning); green otherwise.
   $('battery-card').dataset.state = soc == null ? 'unknown' : soc <= 20 ? 'off' :
     (soc <= 40 || (!stale && data.batteryMode === 'discharging')) ? 'unstable' : 'on';

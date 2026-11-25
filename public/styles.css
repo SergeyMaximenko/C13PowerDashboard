@@ -318,23 +318,30 @@ dialog::backdrop { background: #14273e60; backdrop-filter: blur(5px); }
   line-height: 1.45; font-weight: 600; font-variant-numeric: tabular-nums;
 }
 
-/* Fuel tank in the generator card: the fill height follows --fuel (0..1), the colour follows data-level. */
-.fuel { --c: var(--green); display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px 14px; margin-top: 14px; padding-top: 14px; border-top: 1px solid #dce9e3; }
+/* Fuel in the generator card: label and percent on one row, a bar under them (width follows --fuel 0..1), then "how long it lasts".
+   The colour follows data-level: more than 50% green, 20-50% amber, below 20% red. */
+.fuel { --c: var(--green); margin-top: 14px; padding-top: 14px; border-top: 1px solid #dce9e3; }
 .fuel[data-level="mid"] { --c: var(--amber); }
 .fuel[data-level="low"] { --c: var(--red); }
-.fuel .tank { width: 44px; height: 59px; stroke: none; stroke-width: 0; overflow: visible; }
-.tank-bg { fill: #e7edf3; }
-.tank-fill { fill: var(--c); opacity: .92; transform-box: fill-box; transform-origin: 50% 100%; transform: scaleY(var(--fuel, 0)); transition: transform .6s ease; }
-.tank-frame { fill: none; stroke: #5f7a92; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.tank-mark { fill: none; stroke: #5f7a92; stroke-width: 1.5; opacity: .7; }
-/* "вистачить ≈ 5 год 10 хв": a framed line of its own under the label, in the tank colour. */
-.fuel-left { grid-column: 1 / -1; justify-self: start; margin: -4px 0 2px; padding: 2px 9px; border: 1px solid var(--c); border-radius: 9px; font-size: 12px; font-weight: 400; color: var(--c); }
+.fuel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.fuel-head p { margin: 0; display: flex; align-items: baseline; gap: 3px; }
+.fuel-head strong { font-size: 32px; letter-spacing: -1px; font-weight: 700; color: var(--c); font-variant-numeric: tabular-nums; }
+.fuel-head p > span { font-size: 18px; color: var(--c); }
+.fuel-bar { height: 8px; border-radius: 5px; background: #dcece5; overflow: hidden; margin-top: 6px; }
+.fuel-bar i { display: block; height: 100%; width: calc(var(--fuel, 0) * 100%); background: var(--c); border-radius: 5px; transition: width .6s ease; }
+.fuel-left { margin: 9px 0 0; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 13px; color: var(--muted); }
 .fuel-left[hidden] { display: none; }
-.fuel-label { grid-column: 1 / -1; }
-/* The tank body sits a bit lower than the middle of its drawing, so the number is shifted to match the body centre. */
-.fuel p { margin: 0; display: flex; align-items: baseline; gap: 3px; transform: translateY(3px); }
-.fuel strong { font-size: 32px; letter-spacing: -1px; font-weight: 700; color: var(--c); font-variant-numeric: tabular-nums; }
-.fuel p > span { font-size: 18px; color: var(--c); }
+.fuel-left b { font-size: 14px; font-weight: 700; color: var(--ink, #162c42); white-space: nowrap; }
+
+/* One line "З 15:23 · 1 год. 20 хв.": since when and for how long, plain text (no frame). */
+.since { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 8px; margin: 0 0 10px; }
+.since .event-time { margin: 0; }
+.since { align-items: center; gap: 6px 10px; }
+.since .event-time { font-size: 17px; font-weight: 550; color: #38536b; font-variant-numeric: tabular-nums; }
+/* The duration is a small framed badge in the card colour, next to the "З 15:23" part. */
+.since .grid-duration { display: inline-block; margin: 0; padding: 3px 10px; border: 1px solid var(--accent); border-radius: 11px; background: var(--tint); color: var(--accent); font-size: 13px; font-weight: 600; line-height: 1.4; font-variant-numeric: tabular-nums; }
+@media (max-width: 1050px) { .since .event-time { font-size: 15px; } }
+@media (max-width: 350px) { .since .event-time { font-size: 13px; } .since .grid-duration { font-size: 12px; } }
 
 /* ---------- Tabs: Стан / Паливо та ТО / Журнал ---------- */
 .tabs { display: inline-flex; gap: 4px; padding: 5px; margin: -9px 0 26px; background: #e6edf3; border-radius: 30px; max-width: 100%; }

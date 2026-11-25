@@ -84,8 +84,7 @@
           <h2>Мережа на вході</h2>
           <p class="main-value" id="grid-value">Невідомо</p>
           <div class="card-bottom">
-            <p class="event-time" id="grid-event" hidden></p>
-            <span id="grid-duration" class="grid-duration" hidden></span>
+            <div class="since"><p class="event-time" id="grid-event" hidden></p><span id="grid-duration" class="grid-duration" hidden></span></div>
             <div class="load" id="grid-load" hidden><span class="secondary">Напруга</span><p><strong id="grid-voltage">—</strong><span>В</span></p></div>
             <p class="secondary" id="grid-detail">Очікуємо показники</p>
           </div>
@@ -110,22 +109,13 @@
           <h2>Генератор</h2>
           <p class="main-value output-value gen-value" id="generator-value">Невідомо</p>
           <div class="card-bottom">
-            <p class="event-time" id="generator-times" hidden></p>
-            <span id="generator-duration" class="grid-duration" hidden></span>
+            <div class="since"><p class="event-time" id="generator-times" hidden></p><span id="generator-duration" class="grid-duration" hidden></span></div>
             <div class="load" id="generator-load" hidden><span class="secondary">Потужність</span><p><strong id="generator-power">—</strong><span id="generator-unit">кВт</span><span class="extra" id="generator-extra"></span></p></div>
             <p class="secondary" id="generator-detail">Очікуємо показники</p>
             <div class="fuel" id="fuel" hidden>
-              <span class="secondary fuel-label" id="fuel-label">Паливо в баці</span>
-              <span class="fuel-left" id="fuel-left" hidden></span>
-              <svg class="tank" viewBox="0 0 48 64" aria-hidden="true">
-                <defs><clipPath id="tank-clip"><rect x="5" y="14" width="38" height="44" rx="7"/></clipPath></defs>
-                <rect class="tank-bg" x="5" y="14" width="38" height="44" rx="7"/>
-                <g clip-path="url(#tank-clip)"><rect class="tank-fill" x="5" y="14" width="38" height="44"/></g>
-                <rect class="tank-frame" x="5" y="14" width="38" height="44" rx="7"/>
-                <path class="tank-frame" d="M19 14V8h10v6M17 8h14"/>
-                <path class="tank-mark" d="M5 25h6M5 36h6M5 47h6"/>
-              </svg>
-              <p><strong id="fuel-pct">—</strong><span>%</span></p>
+              <div class="fuel-head"><span class="secondary" id="fuel-label">Паливо в баці</span><p><strong id="fuel-pct">—</strong><span>%</span></p></div>
+              <div class="fuel-bar" aria-hidden="true"><i></i></div>
+              <p class="fuel-left" id="fuel-left" hidden><span>Вистачить приблизно на</span><b id="fuel-left-time"></b></p>
             </div>
           </div>
         </article>
@@ -153,8 +143,8 @@
           <h2>Робота інвертора</h2>
           <p class="main-value output-value" id="output-value">Стан невідомий</p>
           <div class="card-bottom">
-            <div class="load" id="load" hidden><span class="secondary">Споживання з інвертору</span><p><strong id="load-value">—</strong><span id="load-unit">кВт</span></p></div>
             <p class="secondary" id="output-detail">Очікуємо показники</p>
+            <div class="load" id="load" hidden><span class="secondary">Споживання з інвертору</span><p><strong id="load-value">—</strong><span id="load-unit">кВт</span></p></div>
           </div>
         </article>
 

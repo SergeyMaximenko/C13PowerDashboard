@@ -56,13 +56,14 @@ test('grid duration follows the matching event and hides when missing, stale or 
   context.data = { collectedAt: now - 60000, output: 'on', grid: 'on', soc: 100,
     batteryMode: 'idle', loadWatts: 0, events: { appeared: { at: now - 140000 } } };
   vm.runInContext('render(data)', context);
-  assert.equal(element('grid-duration').textContent, 'Є вже ≈ 2 хв. 20 с.');
+  assert.equal(element('grid-duration').textContent, '2 хв. 20 с.');
   assert.equal(element('grid-duration').hidden, false);
+  assert.match(element('grid-event').textContent, /^з \d{2}:\d{2}$/);
   now += 1000;
   vm.runInContext('updateGridDuration()', context);
-  assert.equal(element('grid-duration').textContent, 'Є вже ≈ 2 хв. 21 с.');
+  assert.equal(element('grid-duration').textContent, '2 хв. 21 с.');
   vm.runInContext('render(data)', context);
-  assert.equal(element('grid-duration').textContent, 'Є вже ≈ 2 хв. 21 с.');
+  assert.equal(element('grid-duration').textContent, '2 хв. 21 с.');
   context.data.historyError = 'Unavailable';
   vm.runInContext('render(data)', context);
   assert.equal(element('grid-duration').hidden, true);
@@ -73,7 +74,7 @@ test('grid duration follows the matching event and hides when missing, stale or 
   context.data.grid = 'off';
   context.data.events.disappeared = { at: now - 90000 };
   vm.runInContext('render(data)', context);
-  assert.equal(element('grid-duration').textContent, 'Немає вже ≈ 1 хв. 30 с.');
+  assert.equal(element('grid-duration').textContent, '1 хв. 30 с.');
   now += 3600000;
   vm.runInContext('updateGridDuration()', context);
   assert.equal(element('grid-duration').hidden, true);
