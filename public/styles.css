@@ -479,7 +479,7 @@ dialog::backdrop { background: #14273e60; backdrop-filter: blur(5px); }
 .fact[data-kind="total"] { background: #e3effb; border-color: #bcd5ee; color: #1c4f8a; }
 .fact[data-kind="starts"] { background: #e2f5ee; border-color: #b5e0d0; color: #08604d; }
 
-.loader { display: none; align-items: center; gap: 10px; margin-top: 12px; color: #2866b3; font-size: 14px; font-weight: 600; }
+.loader { display: none; align-items: center; justify-content: center; text-align: center; gap: 10px; margin-top: 12px; color: #2866b3; font-size: 14px; font-weight: 600; }
 .loader[data-on="1"] { display: flex; }
 .bubbles { display: inline-flex; align-items: flex-end; gap: 5px; height: 16px; }
 .bubbles i { width: 9px; height: 9px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #9cc8f2, #2866b3); opacity: .45; animation: bubble 1.1s ease-in-out infinite; }
