@@ -53,6 +53,14 @@ h1 { font-size: clamp(27px, 3.4vw, 42px); line-height: 1.14; letter-spacing: -1.
 .gridscene .gw2 { animation-duration: 1.5s; }
 .gw-sway { animation: gw-sway 2.6s ease-in-out infinite; }
 .gw-b { animation-delay: -1.3s; }
+/* The tower hums under current: the base stays put, the top trembles a little. */
+.gw-shake { transform-box: view-box; transform-origin: 50% 92%; animation: gw-shake .32s linear infinite; }
+@keyframes gw-shake {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  25% { transform: translateX(.35px) rotate(.7deg); }
+  50% { transform: translateX(-.2px) rotate(-.4deg); }
+  75% { transform: translateX(-.35px) rotate(-.8deg); }
+}
 @keyframes gw-flow { to { stroke-dashoffset: -18; } }
 @keyframes gw-sway { 0%, 100% { transform: translateY(-1px); } 50% { transform: translateY(1.6px); } }
 .iv-gear { transform-box: fill-box; transform-origin: center; animation: iv-spin 6s linear infinite; }
