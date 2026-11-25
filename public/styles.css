@@ -20,6 +20,44 @@ svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width:
 .identity { display: flex; align-items: center; gap: 22px; min-width: 0; }
 .brandmark { width: 68px; height: 78px; background: #16374b; border-radius: 18px 18px 18px 5px; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 750; font-size: 36px; letter-spacing: -2px; flex-shrink: 0; box-shadow: 0 6px 15px #18374910; }
 .brandmark span { font-size: 8px; font-weight: 600; letter-spacing: 2px; margin-left: 2px; }
+/* Logo: the tile is filled with the colour of the state (green - mains, amber - generator, red - no power, grey - unknown).
+   The colour slowly flows across the tile, it glows, and a light shimmer sweeps over it every few seconds. */
+.brandmark { position: relative; overflow: hidden; --glow: transparent;
+  background: linear-gradient(135deg, #5b7a96, #93abc0, #5b7a96); background-size: 220% 220%; }
+.brandmark[data-state="on"] { background-image: linear-gradient(135deg, #1f6e53, #55b690, #1f6e53); --glow: rgba(47, 125, 98, .75); }
+.brandmark[data-state="gen"] { background-image: linear-gradient(135deg, #a8650a, #efae45, #a8650a); --glow: rgba(185, 119, 14, .8); }
+.brandmark[data-state="off"] { background-image: linear-gradient(135deg, #a82f3d, #e57985, #a82f3d); --glow: rgba(187, 57, 70, .75); }
+.brandmark[data-state="on"], .brandmark[data-state="gen"], .brandmark[data-state="off"] {
+  animation: brand-flow 5s ease-in-out infinite, brand-glow 3s ease-in-out infinite, brand-lamp 7s linear infinite; }
+@keyframes brand-flow { 0%, 100% { background-position: 0% 0%; } 50% { background-position: 100% 100%; } }
+@keyframes brand-glow {
+  0%, 100% { box-shadow: 0 6px 15px #18374910, 0 0 0 0 transparent; }
+  50% { box-shadow: 0 6px 15px #18374910, 0 0 24px 7px var(--glow); }
+}
+.brandmark::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(110deg, transparent 38%, rgba(255, 255, 255, .6) 50%, transparent 62%); background-size: 260% 100%; background-position: 160% 0; }
+.brandmark[data-state="on"]::after, .brandmark[data-state="gen"]::after, .brandmark[data-state="off"]::after { animation: brand-shine 4.5s ease-in-out infinite; }
+@keyframes brand-shine { 0% { background-position: 160% 0; } 45%, 100% { background-position: -60% 0; } }
+/* Every 7 seconds a bright spark runs once round the edge of the tile, and when it arrives the "13" flashes like a lamp. */
+@property --brand-angle { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+.brandmark::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 3px; pointer-events: none; opacity: 0;
+  background: conic-gradient(from var(--brand-angle), transparent 0 72%, #fff 97%, transparent 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
+.brandmark[data-state="on"]::before, .brandmark[data-state="gen"]::before, .brandmark[data-state="off"]::before { animation: brand-spark 7s linear infinite; }
+@keyframes brand-spark {
+  0% { --brand-angle: 0deg; opacity: 1; }
+  14% { --brand-angle: 360deg; opacity: 1; }
+  15%, 100% { --brand-angle: 360deg; opacity: 0; }
+}
+@keyframes brand-lamp {
+  0%, 12% { text-shadow: 0 0 0 transparent; }
+  16% { text-shadow: 0 0 6px #fff, 0 0 18px #fff, 0 0 30px #ffffffb0; }
+  20% { text-shadow: 0 0 3px #ffffff80; }
+  23% { text-shadow: 0 0 10px #fff, 0 0 22px #ffffffa0; }
+  30%, 100% { text-shadow: 0 0 0 transparent; }
+}
+}
 .eyebrow { margin: 0 0 7px; font-size: 10px; letter-spacing: 2.4px; font-weight: 700; color: #70869a; }
 h1 { font-size: clamp(27px, 3.4vw, 42px); line-height: 1.14; letter-spacing: -1.5px; margin: 0; font-weight: 750; overflow-wrap: anywhere; }
 .subtitle { margin: 7px 0 0; color: var(--muted); font-size: 17px; }

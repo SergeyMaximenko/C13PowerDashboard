@@ -229,6 +229,8 @@ function render(data, example = false) {
   $('battery-load-unit').textContent = batteryWatts !== null && batteryWatts < 1000 ? 'Вт' : 'кВт';
   // Warning for residents: the battery feeds the house and will switch off at 15%.
   $('battery-warning').hidden = !(!stale && grid === 'off' && data.batteryMode === 'discharging');
+  // The logo glows in the colour of the state: green (mains), amber (generator), red (no power); no glow while unknown.
+  $('brandmark').dataset.state = stale ? 'unknown' : grid === 'on' ? 'on' : generator === 'on' ? 'gen' : grid === 'off' ? 'off' : 'unknown';
   $('update-note').textContent = example ? 'Демонстраційні значення для перегляду оформлення' : '';
   notice(example ? 'Приклад відображення — це не поточні показники будинку.' :
     stale ? (data.collectedAt
